@@ -26,6 +26,13 @@ void Tile::grow(){
 	this->setPosition(x*TILEW+offset,y*TILEH+offset);
 }
 
+void Tile::eat(){
+	level=0;
+}
+
 sf::Vector2f Tile::getCoord(){
 	return sf::Vector2f(float(x), float(y));
-}   //hi
+}
+int Tile::getSugarLvl(){
+	return level;
+}

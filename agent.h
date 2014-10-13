@@ -20,27 +20,29 @@
 #include <vector>
 #include <algorithm>
 
+
+#include "tile.h"
+
 #define GRIDW 50
 #define GRIDH 50
-#define MAXLEVEL 5
+#define RADIUS 5
 #define TILEW 10
 #define TILEH 10
 
-class Tile : public sf::CircleShape 
+class Agent : public sf::CircleShape 
 {
 private:
 	int x;
 	int y;
-	short int level;
-	short int capacity;
+	int sugar;
+	short int vision;
 
 public:
-	Tile();
-	Tile(int x, int y);
+	Agent();
+	Agent(int x, int y);
 	
-	void grow();
-	void eat();
-	
-	int getSugarLvl();
+	void update(Tile[][GRIDH]);
+	void move(Tile[][GRIDH]);
+
 	sf::Vector2f getCoord();
 };
