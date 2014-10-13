@@ -28,4 +28,4 @@ void Tile::grow(){
 
 sf::Vector2f Tile::getCoord(){
 	return sf::Vector2f(float(x), float(y));
-}
+} 
