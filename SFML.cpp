@@ -5,7 +5,7 @@
 #define GRIDH 50
 #define TILEW 10
 #define TILEH 10
-#define AGENTS 100
+#define AGENTS 400
 
 
 int main()
@@ -27,9 +27,13 @@ int main()
 	//Agent agent[AGENTS];
 	std::vector<Agent> agent(AGENTS, Agent());
 	for(int c=0;c<AGENTS;c++){
-		int x = rand()%GRIDW;
-		int y = rand()%GRIDW;
+		int x,y;
+		do{
+			x = rand()%GRIDW;
+			y = rand()%GRIDW;
+		}while(tile[x][y].isTaken());
 		agent.at(c) = Agent(x,y);
+		tile[x][y].eat();
 	}
 		
 	sf::Time time = clock.getElapsedTime();
@@ -59,12 +63,26 @@ int main()
 				tile[i][j].grow();
 			}
 		}
+		
+		int sugar = 0;
+		double metabol = 0;
+		bool temp;
+		for(int c=0;c<agent.size();c++){
+			sugar += agent.at(c).getWealth();
+			metabol += agent.at(c).getMetabolRate();
+			temp = agent.at(c).update(tile);
+			sf::Vector2i vecT = agent.at(c).getCoord();
+			if(!temp) {
+				//erase moves back all elements
+				agent.erase(agent.begin()+c);
+				c--;
+				tile[vecT.x][vecT.y].freeUp();
+			}
+		}
+
 
 		
-		for(int c=0;c<AGENTS;c++){
-			agent.at(c).update(tile);
-		}
-		
+		std::cout << agent.size() << '\t' << sugar << '\t' << (int)(sugar/agent.size()) << '\t' << (double)(metabol/agent.size())  << '\n';
 		//std::cout << "People " << (int) humans.size() << "\t" << count  << "\t" << canes  << "\t" << empty << "\t" << (count+canes+empty)  << '\n';
 
 
@@ -76,7 +94,7 @@ int main()
 			window.draw(tile[i][j]);
 		}
 
-		for(int j=0;j<AGENTS;j++){
+		for(int j=0;j<agent.size();j++){
 			window.draw(agent.at(j));
 		}
         window.display();

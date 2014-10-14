@@ -28,6 +28,8 @@
 #define RADIUS 5
 #define TILEW 10
 #define TILEH 10
+#define MAXVISION 5
+#define MAXMETABOL 5
 
 class Agent : public sf::CircleShape 
 {
@@ -36,13 +38,26 @@ private:
 	int y;
 	int sugar;
 	short int vision;
+	short int metabolism;
 
 public:
 	Agent();
 	Agent(int x, int y);
 	
-	void update(Tile[][GRIDH]);
+	bool update(Tile[][GRIDH]);
 	void move(Tile[][GRIDH]);
 
-	sf::Vector2f getCoord();
+	sf::Vector2i getCoord();
+	int getWealth();
+	int getMetabolRate();
+};
+
+struct point {
+	int x;
+	int y;
+	int dist;
+	point(int px, int py, int pdist){x=px;y=py;dist=pdist;}
+	bool operator<( const point& val ) const { 
+    	return dist < val.dist; 
+    }
 };

@@ -4,6 +4,7 @@
 Tile::Tile(){
 	this->x=0;
 	this->y=0;
+	this->taken=false;
 }
 
 Tile::Tile(int x, int y){
@@ -14,8 +15,13 @@ Tile::Tile(int x, int y){
 	//4 is max level of sugar (floored)
 	//capacity = rand()% (MAXLEVEL);
 	capacity = std::max(0.0,(MAXLEVEL)- std::min( sqrt(pow(x-35,2)+pow(y-15,2)), sqrt(pow(x-15,2)+pow(y-35,2)) )/5.0 );
-	level = 0;
+	//level = 0;
+	level = capacity;
 	this->setRadius(level);
+	this->taken=false;
+
+	int offset = MAXLEVEL-level;
+	this->setPosition(x*TILEW+offset,y*TILEH+offset);
 }
 
 void Tile::grow(){
@@ -26,8 +32,11 @@ void Tile::grow(){
 	this->setPosition(x*TILEW+offset,y*TILEH+offset);
 }
 
-void Tile::eat(){
+int Tile::eat(){
+	taken=true;
+	int temp = level;
 	level=0;
+	return temp;
 }
 
 sf::Vector2f Tile::getCoord(){
@@ -35,4 +44,10 @@ sf::Vector2f Tile::getCoord(){
 }
 int Tile::getSugarLvl(){
 	return level;
+}
+bool Tile::isTaken(){
+	return taken;
+}
+void Tile::freeUp(){
+	taken = false;
 }

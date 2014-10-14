@@ -33,14 +33,17 @@ private:
 	int y;
 	short int level;
 	short int capacity;
+	bool taken;
 
 public:
 	Tile();
 	Tile(int x, int y);
 	
 	void grow();
-	void eat();
+	int eat();
 	
 	int getSugarLvl();
 	sf::Vector2f getCoord();
+	bool isTaken();
+	void freeUp();
 };
