@@ -20,8 +20,8 @@
 #include <vector>
 #include <algorithm>
 
-
 #include "tile.h"
+
 
 #define GRIDW 50
 #define GRIDH 50
@@ -31,6 +31,11 @@
 #define MAXVISION 5
 #define MAXMETABOL 5
 
+enum Sex{
+	M,
+	F
+};
+
 class Agent : public sf::CircleShape 
 {
 private:
@@ -39,17 +44,23 @@ private:
 	int sugar;
 	short int vision;
 	short int metabolism;
+	short int maxAge;
+	short int age;
+	Sex	gender; 
+
+	
+	void sex(Tile[][GRIDH]);
 
 public:
 	Agent();
 	Agent(int x, int y);
 	
 	bool update(Tile[][GRIDH]);
-	void move(Tile[][GRIDH]);
-
 	sf::Vector2i getCoord();
 	int getWealth();
 	int getMetabolRate();
+	Sex getGender();
+	void move(Tile[][GRIDH]);
 };
 
 struct point {

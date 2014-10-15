@@ -17,17 +17,20 @@ Agent::Agent(int x, int y){
 	this->setPosition(x*TILEW,y*TILEH);
 	this->setFillColor(sf::Color::Red);
 	this->setRadius(RADIUS);
+	this->maxAge = (rand() % 100) + 900;	// 900 - 1000
+	this->age=0;
+	this->gender = (rand() % 2) ? M : F; //shortcut for M=0 F=1;
 }
 
 bool Agent::update(Tile grid[][GRIDH]){
 	move(grid);
 	sugar -= metabolism;
-	if(sugar <=0 ){
-		//delete this;
+	age++;
+	sex(grid);
+	if(sugar <=0 || age>maxAge){
 		return false;
 	}
 	return true;
-	//this->setPosition(x*TILEW,y*TILEH);
 }
 
 void Agent::move(Tile grid[][GRIDH]){
@@ -82,8 +85,22 @@ void Agent::move(Tile grid[][GRIDH]){
 		grid[oldx][oldy].freeUp();
 		setPosition(x*TILEW,y*TILEH);
 	}
-	sugar += grid[x][y].eat();
+	sugar += grid[x][y].eat(*this);
 	//else stay on the same tile cause you cant move
+}
+
+void Agent::sex(Tile grid[][GRIDH]){
+	int xT = x+1;
+	xT = xT>=GRIDW ? x-GRIDW : xT;
+	if(grid[xT][y].isTaken()){
+		Agent& mate = grid[xT][y].getAgent();
+		//Sex g = mate->getGender();
+		//std::cout << g << std::endl;
+		//if(mate->gender != this->gender){
+		//	// we have a mate
+		//	std::cout << "WE HAVE A MATE" << std::endl;
+		//}
+	}
 }
 
 int Agent::getWealth(){
@@ -96,4 +113,8 @@ int Agent::getMetabolRate(){
 
 sf::Vector2i Agent::getCoord(){
 	return sf::Vector2i((x), (y));
+}
+
+Sex Agent::getGender(){
+	return gender;
 }

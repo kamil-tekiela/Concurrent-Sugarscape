@@ -1,4 +1,16 @@
+// stdafx.h : include file for standard system include files,
+// or project specific include files that are used frequently, but
+// are changed infrequently
+//
+
 #pragma once
+
+#include "targetver.h"
+#include "tile.h"
+#include "agent.h"
+
+#include <stdio.h>
+#include <tchar.h>
 
 #ifdef _DEBUG
 #pragma comment(lib,"sfml-graphics-d.lib")
@@ -19,38 +31,8 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-
-#define GRIDW 50
-#define GRIDH 50
-#define MAXLEVEL 5
-#define TILEW 10
-#define TILEH 10
-
-class Agent;
-
-class Tile : public sf::CircleShape 
-{
-private:
-	int x;
-	int y;
-	short int level;
-	short int capacity;
-	bool taken;
-	Agent& whoIs;
-
-public:
-	Tile();
-	Tile(int x, int y);
-	
-	void grow();
-	int eat(Agent &who);
-	
-	int getSugarLvl();
-	sf::Vector2f getCoord();
-	bool isTaken();
-	void freeUp();
-	Agent& getAgent();
-};
+#include <list>
 
 
-#include "agent.h"
+
+// TODO: reference additional headers your program requires here

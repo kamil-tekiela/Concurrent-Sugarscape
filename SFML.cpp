@@ -11,7 +11,7 @@
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW, GRIDH*TILEH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,4,0,0));
-	window.setFramerateLimit(3); // call it once, after creating the windo
+	//window.setFramerateLimit(3); // call it once, after creating the windo
 	
 	sf::Clock clock;
 
@@ -25,15 +25,16 @@ int main()
 
 	// we create random agents
 	//Agent agent[AGENTS];
-	std::vector<Agent> agent(AGENTS, Agent());
-	for(int c=0;c<AGENTS;c++){
+	std::list<Agent> agent(AGENTS, Agent());
+	for(std::list<Agent>::iterator it=agent.begin(); it != agent.end(); ++it){
+	//for(int c=0;c<AGENTS;c++){
 		int x,y;
 		do{
 			x = rand()%GRIDW;
 			y = rand()%GRIDW;
 		}while(tile[x][y].isTaken());
-		agent.at(c) = Agent(x,y);
-		tile[x][y].eat();
+		*it = Agent(x,y);
+		tile[x][y].eat((*it));
 	}
 		
 	sf::Time time = clock.getElapsedTime();
@@ -67,21 +68,26 @@ int main()
 		int sugar = 0;
 		double metabol = 0;
 		bool temp;
-		for(int c=0;c<agent.size();c++){
-			sugar += agent.at(c).getWealth();
-			metabol += agent.at(c).getMetabolRate();
-			temp = agent.at(c).update(tile);
-			sf::Vector2i vecT = agent.at(c).getCoord();
+		//for(int c=0;c<agent.size();c++){
+		//for(std::list<Agent>::iterator it=agent.begin(); it != agent.end(); ++it){
+		std::list<Agent>::iterator it=agent.begin();
+		while(it!=agent.end()){
+			sugar += (*it).getWealth();
+			metabol += (*it).getMetabolRate();
+			temp = (*it).update(tile);
+			sf::Vector2i vecT = (*it).getCoord();
 			if(!temp) {
-				//erase moves back all elements
-				agent.erase(agent.begin()+c);
-				c--;
+				// //erase moves back all elements
+				it = agent.erase(it);
+				//c--;
 				tile[vecT.x][vecT.y].freeUp();
 			}
+			else
+				++it;
 		}
 
 
-		
+		if(agent.size())
 		std::cout << agent.size() << '\t' << sugar << '\t' << (int)(sugar/agent.size()) << '\t' << (double)(metabol/agent.size())  << '\n';
 		//std::cout << "People " << (int) humans.size() << "\t" << count  << "\t" << canes  << "\t" << empty << "\t" << (count+canes+empty)  << '\n';
 
@@ -93,9 +99,9 @@ int main()
 		for(int j=0;j<GRIDH;j++){
 			window.draw(tile[i][j]);
 		}
-
-		for(int j=0;j<agent.size();j++){
-			window.draw(agent.at(j));
+		
+		for(std::list<Agent>::iterator it=agent.begin(); it != agent.end(); ++it){
+			window.draw(*it);
 		}
         window.display();
     }
