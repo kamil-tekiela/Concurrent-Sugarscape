@@ -19,6 +19,7 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
+#include <list>
 
 #include "tile.h"
 
@@ -49,18 +50,19 @@ private:
 	Sex	gender; 
 
 	
-	void sex(Tile[][GRIDH]);
+	void sex(Tile[][GRIDH], std::list<Agent>&);
+	void move(Tile[][GRIDH]);
 
 public:
 	Agent();
 	Agent(int x, int y);
 	
-	bool update(Tile[][GRIDH]);
+	bool update(Tile[][GRIDH], std::list<Agent>&);
 	sf::Vector2i getCoord();
 	int getWealth();
 	int getMetabolRate();
 	Sex getGender();
-	void move(Tile[][GRIDH]);
+	bool isFertile();
 };
 
 struct point {

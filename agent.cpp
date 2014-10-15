@@ -9,24 +9,24 @@ Agent::Agent(){
 }
 
 Agent::Agent(int x, int y){
-	this->x=x;
-	this->y=y;
-	this->sugar= (rand()% 50)+1; //random number chosen by fair dice roll
-	this->vision= (rand()% MAXVISION)+1;
-	this->metabolism= (rand()% MAXMETABOL)+1;
+	this->x=			x;
+	this->y=			y;
+	this->sugar=		(rand()% 50)+1; //random number chosen by fair dice roll
+	this->vision=		(rand()% MAXVISION)+1;
+	this->metabolism=	(rand()% MAXMETABOL)+1;
 	this->setPosition(x*TILEW,y*TILEH);
 	this->setFillColor(sf::Color::Red);
 	this->setRadius(RADIUS);
-	this->maxAge = (rand() % 100) + 900;	// 900 - 1000
+	this->maxAge =		(rand() % 100) + 900;	// 900 - 1000
 	this->age=0;
-	this->gender = (rand() % 2) ? M : F; //shortcut for M=0 F=1;
+	this->gender =		(rand() % 2) ? M : F; //shortcut for M=0 F=1;
 }
 
-bool Agent::update(Tile grid[][GRIDH]){
+bool Agent::update(Tile grid[][GRIDH], std::list<Agent> &agent){
 	move(grid);
 	sugar -= metabolism;
 	age++;
-	sex(grid);
+	sex(grid, agent);
 	if(sugar <=0 || age>maxAge){
 		return false;
 	}
@@ -85,22 +85,57 @@ void Agent::move(Tile grid[][GRIDH]){
 		grid[oldx][oldy].freeUp();
 		setPosition(x*TILEW,y*TILEH);
 	}
-	sugar += grid[x][y].eat(*this);
+	sugar += grid[x][y].eat();
 	//else stay on the same tile cause you cant move
 }
 
-void Agent::sex(Tile grid[][GRIDH]){
+void Agent::sex(Tile grid[][GRIDH], std::list<Agent> &agent){
 	int xT = x+1;
+	int yT;
 	xT = xT>=GRIDW ? x-GRIDW : xT;
-	if(grid[xT][y].isTaken()){
-		Agent& mate = grid[xT][y].getAgent();
-		//Sex g = mate->getGender();
-		//std::cout << g << std::endl;
-		//if(mate->gender != this->gender){
-		//	// we have a mate
-		//	std::cout << "WE HAVE A MATE" << std::endl;
-		//}
+	yT = y;
+	if(grid[xT][yT].isTaken()){
+		sf::Vector2i vecT(xT,yT);
+		std::list<Agent>::iterator it;
+		//find agent living on this tile
+		for(it=agent.begin(); it != agent.end(); ++it){
+			if((*it).getCoord() == vecT) break;
+		}
+		if(it == agent.end())
+			return;
+
+		if((*it).isFertile() && this->isFertile() && (*it).gender != this->gender ){
+			//possible children locations
+			std::vector<sf::Vector2i> fields;
+			fields.push_back(sf::Vector2i((x+1)>=GRIDW?x+1-GRIDW:x+1, y));
+			fields.push_back(sf::Vector2i((x-1)<0?x-1+GRIDW:x-1, y));
+			fields.push_back(sf::Vector2i(x, (y+1)>=GRIDH?y+1-GRIDH:y+1));
+			fields.push_back(sf::Vector2i(x, (y-1)<0?y-1+GRIDH:y-1));
+			fields.push_back(sf::Vector2i((xT+1)>=GRIDW?xT+1-GRIDW:xT+1, yT));
+			fields.push_back(sf::Vector2i((xT-1)<0?xT-1+GRIDW:xT-1, yT));
+			fields.push_back(sf::Vector2i(xT, (yT+1)>=GRIDH?yT+1-GRIDH:yT+1));
+			fields.push_back(sf::Vector2i(xT, (yT-1)<0?yT-1+GRIDH:yT-1));
+			std::vector<sf::Vector2i>::iterator fieldsIt=  fields.begin();
+			while(fieldsIt != fields.end()){
+				if(!grid[(*fieldsIt).x][(*fieldsIt).y].isTaken()){
+					break;
+				}
+				fieldsIt++;
+			}
+			if(fieldsIt == fields.end())
+				return;
+
+			Agent *child = new Agent((*fieldsIt).x, (*fieldsIt).y);
+			grid[(*fieldsIt).x][(*fieldsIt).y].eat();
+			agent.push_back(*child);
+			this->sugar /= 2;
+			(*it).sugar /= 2;
+		}
 	}
+}
+
+bool Agent::isFertile(){
+	return (age>150 && age<=500 && sugar>50);
 }
 
 int Agent::getWealth(){

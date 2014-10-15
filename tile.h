@@ -13,8 +13,6 @@
 #pragma comment(lib,"sfml-window.lib")
 #pragma comment(lib,"sfml-network.lib")
 #endif
-#pragma comment(lib,"opengl32.lib")
-#pragma comment(lib,"glu32.lib") 
 #include <SFML/Graphics.hpp>
 #include <iostream>
 #include <vector>
@@ -36,20 +34,20 @@ private:
 	short int level;
 	short int capacity;
 	bool taken;
-	Agent& whoIs;
+	//Agent whoIs;
 
 public:
 	Tile();
 	Tile(int x, int y);
 	
 	void grow();
-	int eat(Agent &who);
+	int eat();
 	
 	int getSugarLvl();
 	sf::Vector2f getCoord();
 	bool isTaken();
 	void freeUp();
-	Agent& getAgent();
+	//Agent& getAgent();
 };
 
 

@@ -5,7 +5,7 @@ Tile::Tile(){
 	this->x=0;
 	this->y=0;
 	this->taken=false;
-	this->whoIs=Agent();
+	//this->whoIs=Agent();
 }
 
 Tile::Tile(int x, int y){
@@ -19,7 +19,8 @@ Tile::Tile(int x, int y){
 	this->level = capacity;
 	this->setRadius(level);
 	this->taken=false;
-	this->whoIs=Agent();
+	//this->whoIs=Agent();
+	//this->whoIs= NULL;
 
 	int offset = MAXLEVEL-level;
 	this->setPosition(x*TILEW+offset,y*TILEH+offset);
@@ -33,11 +34,11 @@ void Tile::grow(){
 	setPosition(x*TILEW+offset,y*TILEH+offset);
 }
 
-int Tile::eat(Agent &who){
+int Tile::eat(){
 	taken=true;
 	int temp = level;
 	level=0;
-	whoIs = who;
+	//whoIs = who;
 	return temp;
 }
 
@@ -52,8 +53,8 @@ bool Tile::isTaken(){
 }
 void Tile::freeUp(){
 	taken = false;
-	whoIs=Agent();
+	//whoIs=Agent();
 }
-Agent& Tile::getAgent(){
-	return whoIs;
-}
+//Agent& Tile::getAgent(){
+//	return whoIs;
+//}

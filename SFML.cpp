@@ -11,7 +11,7 @@
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW, GRIDH*TILEH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,4,0,0));
-	//window.setFramerateLimit(3); // call it once, after creating the windo
+	//window.setFramerateLimit(30); // call it once, after creating the windo
 	
 	sf::Clock clock;
 
@@ -34,7 +34,7 @@ int main()
 			y = rand()%GRIDW;
 		}while(tile[x][y].isTaken());
 		*it = Agent(x,y);
-		tile[x][y].eat((*it));
+		tile[x][y].eat();
 	}
 		
 	sf::Time time = clock.getElapsedTime();
@@ -72,13 +72,13 @@ int main()
 		//for(std::list<Agent>::iterator it=agent.begin(); it != agent.end(); ++it){
 		std::list<Agent>::iterator it=agent.begin();
 		while(it!=agent.end()){
-			sugar += (*it).getWealth();
-			metabol += (*it).getMetabolRate();
-			temp = (*it).update(tile);
+			sugar +=			(*it).getWealth();
+			metabol +=			(*it).getMetabolRate();
+			temp =				(*it).update(tile, agent);
 			sf::Vector2i vecT = (*it).getCoord();
 			if(!temp) {
 				// //erase moves back all elements
-				it = agent.erase(it);
+				it =			agent.erase(it);
 				//c--;
 				tile[vecT.x][vecT.y].freeUp();
 			}
