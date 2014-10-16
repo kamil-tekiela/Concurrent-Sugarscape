@@ -11,9 +11,11 @@
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW, GRIDH*TILEH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,4,0,0));
-	//window.setFramerateLimit(30); // call it once, after creating the windo
+	//window.setFramerateLimit(3); // call it once, after creating the windo
 	
 	sf::Clock clock;
+
+	int aveSugar;
 
 	// we create sugarscape
 	static Tile tile[GRIDW][GRIDH];
@@ -68,13 +70,14 @@ int main()
 		int sugar = 0;
 		double metabol = 0;
 		bool temp;
+		aveSugar = sugar/agent.size();
 		//for(int c=0;c<agent.size();c++){
 		//for(std::list<Agent>::iterator it=agent.begin(); it != agent.end(); ++it){
 		std::list<Agent>::iterator it=agent.begin();
 		while(it!=agent.end()){
 			sugar +=			(*it).getWealth();
 			metabol +=			(*it).getMetabolRate();
-			temp =				(*it).update(tile, agent);
+			temp =				(*it).update(tile, agent, aveSugar);
 			sf::Vector2i vecT = (*it).getCoord();
 			if(!temp) {
 				// //erase moves back all elements

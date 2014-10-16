@@ -12,19 +12,36 @@ Agent::Agent(int x, int y){
 	this->x=			x;
 	this->y=			y;
 	this->sugar=		(rand()% 50)+1; //random number chosen by fair dice roll
+	this->sugarStart=	sugar;
 	this->vision=		(rand()% MAXVISION)+1;
 	this->metabolism=	(rand()% MAXMETABOL)+1;
 	this->setPosition(x*TILEW,y*TILEH);
 	this->setFillColor(sf::Color::Red);
 	this->setRadius(RADIUS);
-	this->maxAge =		(rand() % 100) + 900;	// 900 - 1000
-	this->age=0;
+	this->maxAge =		(rand() % 400) + 600;	// 600 - 1000
+	this->age=			0;
 	this->gender =		(rand() % 2) ? M : F; //shortcut for M=0 F=1;
 }
 
-bool Agent::update(Tile grid[][GRIDH], std::list<Agent> &agent){
+Agent::Agent(int x, int y, int wealth, double met, int vis){
+	this->x=			x;
+	this->y=			y;
+	this->sugar=		wealth;
+	this->sugarStart=	wealth;
+	this->vision=		vis;
+	this->metabolism=	met;
+	this->setPosition(x*TILEW,y*TILEH);
+	this->setFillColor(sf::Color::Red);
+	this->setRadius(RADIUS);
+	this->maxAge =		(rand() % 400) + 600;	// 900 - 1000
+	this->age=			0;
+	this->gender =		(rand() % 2) ? M : F; //shortcut for M=0 F=1;
+}
+
+bool Agent::update(Tile grid[][GRIDH], std::list<Agent> &agent, int s){
 	move(grid);
 	sugar -= metabolism;
+	setFillColor(sf::Color(0, 0, std::min<double>(sugar, 255.0)));
 	age++;
 	sex(grid, agent);
 	if(sugar <=0 || age>maxAge){
@@ -124,10 +141,19 @@ void Agent::sex(Tile grid[][GRIDH], std::list<Agent> &agent){
 			}
 			if(fieldsIt == fields.end())
 				return;
-
-			Agent *child = new Agent((*fieldsIt).x, (*fieldsIt).y);
+			
+			double fmin = std::min(this->getMetabolRate(), (*it).getMetabolRate());
+			double fmax = std::max(this->getMetabolRate(), (*it).getMetabolRate());
+			double randMet = fmin + ((double)rand() / RAND_MAX) * (fmax-fmin);
+			Agent *child = new Agent((*fieldsIt).x, (*fieldsIt).y, 
+									this->sugar/2+(*it).sugar/2, 
+									(double)(this->getMetabolRate()+(*it).getMetabolRate())/2, 
+									//randMet,
+									//fmin+fmax,
+									(int)(this->vision+(*it).vision)/2);
 			grid[(*fieldsIt).x][(*fieldsIt).y].eat();
 			agent.push_back(*child);
+			delete child;
 			this->sugar /= 2;
 			(*it).sugar /= 2;
 		}
@@ -135,7 +161,7 @@ void Agent::sex(Tile grid[][GRIDH], std::list<Agent> &agent){
 }
 
 bool Agent::isFertile(){
-	return (age>150 && age<=500 && sugar>50);
+	return (age>150 && age<=500 && sugar>50 && sugar>=sugarStart/2);
 }
 
 int Agent::getWealth(){

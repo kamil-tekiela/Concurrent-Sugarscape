@@ -42,9 +42,10 @@ class Agent : public sf::CircleShape
 private:
 	int x;
 	int y;
-	int sugar;
+	double sugar;
+	int sugarStart;
 	short int vision;
-	short int metabolism;
+	double metabolism;
 	short int maxAge;
 	short int age;
 	Sex	gender; 
@@ -56,8 +57,9 @@ private:
 public:
 	Agent();
 	Agent(int x, int y);
+	Agent(int x, int y, int wealth, double met, int vis);
 	
-	bool update(Tile[][GRIDH], std::list<Agent>&);
+	bool update(Tile[][GRIDH], std::list<Agent>&, int s);
 	sf::Vector2i getCoord();
 	int getWealth();
 	int getMetabolRate();
