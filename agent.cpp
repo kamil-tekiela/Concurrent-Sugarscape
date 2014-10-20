@@ -2,28 +2,18 @@
 
 
 Agent::Agent(){
-	this->x=0;
-	this->y=0;
-	this->sugar=0;
-	this->vision= 1;
+	this->setVariables();
 }
 
 Agent::Agent(int x, int y){
+	this->setVariables();
 	this->x=			x;
 	this->y=			y;
-	this->sugar=		(rand()% 50)+1; //random number chosen by fair dice roll
-	this->sugarStart=	sugar;
-	this->vision=		(rand()% MAXVISION)+1;
-	this->metabolism=	(rand()% MAXMETABOL)+1;
 	this->setPosition(x*TILEW,y*TILEH);
-	this->setFillColor(sf::Color::Red);
-	this->setRadius(RADIUS);
-	this->maxAge =		(rand() % 400) + 600;	// 600 - 1000
-	this->age=			0;
-	this->gender =		(rand() % 2) ? M : F; //shortcut for M=0 F=1;
 }
 
 Agent::Agent(int x, int y, int wealth, double met, int vis){
+	this->setVariables();
 	this->x=			x;
 	this->y=			y;
 	this->sugar=		wealth;
@@ -31,19 +21,44 @@ Agent::Agent(int x, int y, int wealth, double met, int vis){
 	this->vision=		vis;
 	this->metabolism=	met;
 	this->setPosition(x*TILEW,y*TILEH);
-	this->setFillColor(sf::Color::Red);
-	this->setRadius(RADIUS);
-	this->maxAge =		(rand() % 400) + 600;	// 900 - 1000
-	this->age=			0;
-	this->gender =		(rand() % 2) ? M : F; //shortcut for M=0 F=1;
 }
 
-bool Agent::update(Tile grid[][GRIDH], std::list<Agent> &agent, int s){
+void Agent::setVariables(){
+	this->setFillColor(sf::Color::Red);
+	this->x =			0;
+	this->y =			0;
+	this->setPosition(x*TILEW,y*TILEH);
+	this->setRadius(RADIUS);
+	this->maxAge =		((rand()% (40 * AGEM)) + 60 * AGEM);	// 600 - 1000
+	this->age=			((rand()% (50 * AGEM))+ 0 * AGEM);;
+	this->gender =		(rand()% 2) ? M : F; //shortcut for M=0 F=1;
+	this->sugar=		(rand()% 50)+50; 
+	this->sugarStart=	sugar;
+	this->vision=		(rand()% MAXVISION)+1;
+	this->metabolism=	(rand()% MAXMETABOL)+1;
+	this->puberty =		((rand()% (4 * AGEM))+ 12 * AGEM); //12 - 15
+	this->endFertility =( (gender==F) ? ((rand()% (11 * AGEM))+ 40 * AGEM) : ((rand()% (11 * AGEM))+ 50 * AGEM) );
+}
+
+bool Agent::update(Tile grid[][GRIDH], std::list<Agent> &agent, double s){
 	move(grid);
+	if(vision>= s)
+	//if(this->isFertile())
+		setFillColor(sf::Color(255, 0, 0));
+	else
+		setFillColor(sf::Color(0, 0, 255));
 	sugar -= metabolism;
-	setFillColor(sf::Color(0, 0, std::min<double>(sugar, 255.0)));
-	age++;
-	sex(grid, agent);
+	age++;	
+
+	int xT = x+1;
+	int yT = y;
+	xT = xT>=GRIDW ? xT-GRIDW : xT;
+	sex(xT, yT, grid, agent);
+	xT = x;
+	yT = y+1;
+	yT = yT>=GRIDH ? yT-GRIDH : yT;
+	sex(xT, yT, grid, agent);
+
 	if(sugar <=0 || age>maxAge){
 		return false;
 	}
@@ -53,6 +68,10 @@ bool Agent::update(Tile grid[][GRIDH], std::list<Agent> &agent, int s){
 void Agent::move(Tile grid[][GRIDH]){
 	std::vector<point> points;
 	int high = 0;
+	
+	//points.push_back(point(x,y,0));
+	//high = grid[x][y].getSugarLvl();
+
 	for(int a=x-vision; a<=x+vision; a++){
 		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
 		if(grid[aT][y].isTaken()) continue;
@@ -106,11 +125,7 @@ void Agent::move(Tile grid[][GRIDH]){
 	//else stay on the same tile cause you cant move
 }
 
-void Agent::sex(Tile grid[][GRIDH], std::list<Agent> &agent){
-	int xT = x+1;
-	int yT;
-	xT = xT>=GRIDW ? x-GRIDW : xT;
-	yT = y;
+void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::list<Agent> &agent){
 	if(grid[xT][yT].isTaken()){
 		sf::Vector2i vecT(xT,yT);
 		std::list<Agent>::iterator it;
@@ -142,26 +157,25 @@ void Agent::sex(Tile grid[][GRIDH], std::list<Agent> &agent){
 			if(fieldsIt == fields.end())
 				return;
 			
-			double fmin = std::min(this->getMetabolRate(), (*it).getMetabolRate());
-			double fmax = std::max(this->getMetabolRate(), (*it).getMetabolRate());
-			double randMet = fmin + ((double)rand() / RAND_MAX) * (fmax-fmin);
+			int childMet = (rand()%2) ? this->getMetabolRate() : (*it).getMetabolRate() ;
+			int childVis = (rand()%2) ? this->vision : (*it).vision ;
+			//childMet = this->getMetabolRate() | (*it).getMetabolRate();
+			//childVis = this->vision & (*it).vision;
 			Agent *child = new Agent((*fieldsIt).x, (*fieldsIt).y, 
-									this->sugar/2+(*it).sugar/2, 
-									(double)(this->getMetabolRate()+(*it).getMetabolRate())/2, 
-									//randMet,
-									//fmin+fmax,
-									(int)(this->vision+(*it).vision)/2);
+									this->sugarStart/2+(*it).sugarStart/2, 
+									childMet,
+									childVis);
 			grid[(*fieldsIt).x][(*fieldsIt).y].eat();
 			agent.push_back(*child);
 			delete child;
-			this->sugar /= 2;
-			(*it).sugar /= 2;
+			this->sugar -= sugarStart/2;
+			(*it).sugar -= sugarStart/2;
 		}
 	}
 }
 
 bool Agent::isFertile(){
-	return (age>150 && age<=500 && sugar>50 && sugar>=sugarStart/2);
+	return (age>=puberty && age<endFertility && sugar>=sugarStart);
 }
 
 int Agent::getWealth(){
@@ -178,4 +192,8 @@ sf::Vector2i Agent::getCoord(){
 
 Sex Agent::getGender(){
 	return gender;
+}
+
+int Agent::getVision(){
+	return vision;
 }

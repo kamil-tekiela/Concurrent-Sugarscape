@@ -11,11 +11,13 @@
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW, GRIDH*TILEH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,4,0,0));
-	//window.setFramerateLimit(3); // call it once, after creating the windo
+	window.setFramerateLimit(30); // call it once, after creating the window
 	
 	sf::Clock clock;
-
-	int aveSugar;
+	
+	double aveSugar;
+	double aveVision;
+	int years=0;
 
 	// we create sugarscape
 	static Tile tile[GRIDW][GRIDH];
@@ -61,6 +63,8 @@ int main()
         }
 		
 		//update
+		years++;
+
 		for(int i=0;i<GRIDW;i++){
 			for(int j=0;j<GRIDH;j++){
 				tile[i][j].grow();
@@ -68,16 +72,19 @@ int main()
 		}
 		
 		int sugar = 0;
+		double vision = 0;
 		double metabol = 0;
 		bool temp;
-		aveSugar = sugar/agent.size();
+		int people = 0;
 		//for(int c=0;c<agent.size();c++){
 		//for(std::list<Agent>::iterator it=agent.begin(); it != agent.end(); ++it){
 		std::list<Agent>::iterator it=agent.begin();
 		while(it!=agent.end()){
+			people++;
+			temp =				(*it).update(tile, agent, aveVision);
 			sugar +=			(*it).getWealth();
+			vision +=			(*it).getVision();
 			metabol +=			(*it).getMetabolRate();
-			temp =				(*it).update(tile, agent, aveSugar);
 			sf::Vector2i vecT = (*it).getCoord();
 			if(!temp) {
 				// //erase moves back all elements
@@ -90,9 +97,12 @@ int main()
 		}
 
 
-		if(agent.size())
-		std::cout << agent.size() << '\t' << sugar << '\t' << (int)(sugar/agent.size()) << '\t' << (double)(metabol/agent.size())  << '\n';
+		if(agent.size()){
+		aveSugar = (int)sugar/people;
+		aveVision = vision/people;
+		std::cout << (int)years/10 << "\t" << agent.size() << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
 		//std::cout << "People " << (int) humans.size() << "\t" << count  << "\t" << canes  << "\t" << empty << "\t" << (count+canes+empty)  << '\n';
+		}
 
 
 		//DRAW

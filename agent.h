@@ -31,6 +31,7 @@
 #define TILEH 10
 #define MAXVISION 5
 #define MAXMETABOL 5
+#define AGEM 10
 
 enum Sex{
 	M,
@@ -48,23 +49,27 @@ private:
 	double metabolism;
 	short int maxAge;
 	short int age;
+	short int puberty;
+	short int endFertility;
 	Sex	gender; 
 
 	
-	void sex(Tile[][GRIDH], std::list<Agent>&);
+	void sex(int xT, int yT, Tile[][GRIDH], std::list<Agent>&);
 	void move(Tile[][GRIDH]);
+	void setVariables();
 
 public:
 	Agent();
 	Agent(int x, int y);
 	Agent(int x, int y, int wealth, double met, int vis);
 	
-	bool update(Tile[][GRIDH], std::list<Agent>&, int s);
+	bool update(Tile[][GRIDH], std::list<Agent>&, double s);
 	sf::Vector2i getCoord();
 	int getWealth();
 	int getMetabolRate();
 	Sex getGender();
 	bool isFertile();
+	int getVision();
 };
 
 struct point {
