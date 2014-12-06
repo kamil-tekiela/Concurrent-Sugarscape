@@ -20,6 +20,7 @@
 #include <vector>
 #include <algorithm>
 #include <list>
+#include <boost/ptr_container/ptr_vector.hpp>
 
 #include "tile.h"
 
@@ -52,24 +53,28 @@ private:
 	short int puberty;
 	short int endFertility;
 	Sex	gender; 
+	Agent* mother;
+	Agent* father;
+	std::vector<Agent*> children;
 
 	
-	void sex(int xT, int yT, Tile[][GRIDH], std::list<Agent>&);
+	void sex(int xT, int yT, Tile[][GRIDH], boost::ptr_vector<Agent>&);
 	void move(Tile[][GRIDH]);
 	void setVariables();
 
 public:
 	Agent();
 	Agent(int x, int y);
-	Agent(int x, int y, int wealth, double met, int vis);
+	Agent(int x, int y, int wealth, double met, int vis, Agent* mother, Agent* father);
 	
-	bool update(Tile[][GRIDH], std::list<Agent>&, double s);
+	bool update(Tile[][GRIDH], boost::ptr_vector<Agent>&, double s);
 	sf::Vector2i getCoord();
 	int getWealth();
 	int getMetabolRate();
 	Sex getGender();
 	bool isFertile();
 	int getVision();
+	void addChild(Agent* child);
 };
 
 struct point {

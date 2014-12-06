@@ -38,7 +38,6 @@ int Tile::eat(){
 	taken=true;
 	int temp = level;
 	level=0;
-	//whoIs = who;
 	return temp;
 }
 
@@ -53,8 +52,4 @@ bool Tile::isTaken(){
 }
 void Tile::freeUp(){
 	taken = false;
-	//whoIs=Agent();
 }
-//Agent& Tile::getAgent(){
-//	return whoIs;
-//}

@@ -15,8 +15,8 @@ int main()
 	
 	sf::Clock clock;
 	
-	double aveSugar;
-	double aveVision;
+	double aveSugar = 0;
+	double aveVision = 0;
 	int years=0;
 
 	// we create sugarscape
@@ -28,16 +28,16 @@ int main()
 	}
 
 	// we create random agents
-	//Agent agent[AGENTS];
-	std::list<Agent> agent(AGENTS, Agent());
-	for(std::list<Agent>::iterator it=agent.begin(); it != agent.end(); ++it){
-	//for(int c=0;c<AGENTS;c++){
+	boost::ptr_vector<Agent> agent;
+	//for(std::vector<Agent*>::iterator it=agent.begin(); it != agent.end(); ++it){
+	for(int i=0; i<AGENTS; i++){
 		int x,y;
 		do{
 			x = rand()%GRIDW;
 			y = rand()%GRIDW;
 		}while(tile[x][y].isTaken());
-		*it = Agent(x,y);
+		Agent* a = new Agent(x,y);
+		agent.push_back(a);
 		tile[x][y].eat();
 	}
 		
@@ -71,14 +71,14 @@ int main()
 			}
 		}
 		
+		std::cout <<  agent.capacity() << '\n';
+
 		int sugar = 0;
 		double vision = 0;
 		double metabol = 0;
 		bool temp;
 		int people = 0;
-		//for(int c=0;c<agent.size();c++){
-		//for(std::list<Agent>::iterator it=agent.begin(); it != agent.end(); ++it){
-		std::list<Agent>::iterator it=agent.begin();
+		boost::ptr_vector<Agent>::iterator it=agent.begin();
 		while(it!=agent.end()){
 			people++;
 			temp =				(*it).update(tile, agent, aveVision);
@@ -89,7 +89,6 @@ int main()
 			if(!temp) {
 				// //erase moves back all elements
 				it =			agent.erase(it);
-				//c--;
 				tile[vecT.x][vecT.y].freeUp();
 			}
 			else
@@ -98,11 +97,11 @@ int main()
 
 
 		if(agent.size()){
-		aveSugar = (int)sugar/people;
-		aveVision = vision/people;
-		std::cout << (int)years/10 << "\t" << agent.size() << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
-		//std::cout << "People " << (int) humans.size() << "\t" << count  << "\t" << canes  << "\t" << empty << "\t" << (count+canes+empty)  << '\n';
+			aveSugar = (int)sugar/people;
+			aveVision = vision/people;
+			//std::cout << (int)years/10 << "\t" << agent.size() << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
 		}
+		
 
 
 		//DRAW
@@ -113,7 +112,7 @@ int main()
 			window.draw(tile[i][j]);
 		}
 		
-		for(std::list<Agent>::iterator it=agent.begin(); it != agent.end(); ++it){
+		for(boost::ptr_vector<Agent>::iterator it=agent.begin(); it != agent.end(); ++it){
 			window.draw(*it);
 		}
         window.display();

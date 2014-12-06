@@ -10,9 +10,11 @@ Agent::Agent(int x, int y){
 	this->x=			x;
 	this->y=			y;
 	this->setPosition(x*TILEW,y*TILEH);
+	this->mother = NULL;
+	this->father = NULL;
 }
 
-Agent::Agent(int x, int y, int wealth, double met, int vis){
+Agent::Agent(int x, int y, int wealth, double met, int vis, Agent* mother, Agent* father){
 	this->setVariables();
 	this->x=			x;
 	this->y=			y;
@@ -21,6 +23,8 @@ Agent::Agent(int x, int y, int wealth, double met, int vis){
 	this->vision=		vis;
 	this->metabolism=	met;
 	this->setPosition(x*TILEW,y*TILEH);
+	this->mother = mother;
+	this->father = father;
 }
 
 void Agent::setVariables(){
@@ -40,7 +44,7 @@ void Agent::setVariables(){
 	this->endFertility =( (gender==F) ? ((rand()% (11 * AGEM))+ 40 * AGEM) : ((rand()% (11 * AGEM))+ 50 * AGEM) );
 }
 
-bool Agent::update(Tile grid[][GRIDH], std::list<Agent> &agent, double s){
+bool Agent::update(Tile grid[][GRIDH], boost::ptr_vector<Agent> &agent, double s){
 	move(grid);
 	if(vision>= s)
 	//if(this->isFertile())
@@ -59,6 +63,9 @@ bool Agent::update(Tile grid[][GRIDH], std::list<Agent> &agent, double s){
 	yT = yT>=GRIDH ? yT-GRIDH : yT;
 	sex(xT, yT, grid, agent);
 
+	//if(children.size())
+	//std::cout << (*children.at(0)).getVision() << std::endl;
+
 	if(sugar <=0 || age>maxAge){
 		return false;
 	}
@@ -69,8 +76,8 @@ void Agent::move(Tile grid[][GRIDH]){
 	std::vector<point> points;
 	int high = 0;
 	
-	//points.push_back(point(x,y,0));
-	//high = grid[x][y].getSugarLvl();
+	points.push_back(point(x,y,0));
+	high = grid[x][y].getSugarLvl();
 
 	for(int a=x-vision; a<=x+vision; a++){
 		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
@@ -125,16 +132,19 @@ void Agent::move(Tile grid[][GRIDH]){
 	//else stay on the same tile cause you cant move
 }
 
-void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::list<Agent> &agent){
+void Agent::sex(int xT, int yT, Tile grid[][GRIDH], boost::ptr_vector<Agent> &agent){
 	if(grid[xT][yT].isTaken()){
 		sf::Vector2i vecT(xT,yT);
-		std::list<Agent>::iterator it;
+		boost::ptr_vector<Agent>::iterator it;
 		//find agent living on this tile
 		for(it=agent.begin(); it != agent.end(); ++it){
 			if((*it).getCoord() == vecT) break;
 		}
-		if(it == agent.end())
+		boost::ptr_vector<Agent>::iterator end = agent.end();
+		if(it == end)
 			return;
+		
+		Agent* a = &(*it);
 
 		if((*it).isFertile() && this->isFertile() && (*it).gender != this->gender ){
 			//possible children locations
@@ -164,13 +174,17 @@ void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::list<Agent> &agent){
 			Agent *child = new Agent((*fieldsIt).x, (*fieldsIt).y, 
 									this->sugarStart/2+(*it).sugarStart/2, 
 									childMet,
-									childVis);
+									childVis,
+									this,
+									this);
 			grid[(*fieldsIt).x][(*fieldsIt).y].eat();
-			agent.push_back(*child);
-			delete child;
+			agent.push_back(child);
+			(*it).addChild(child);
+			//this->addChild(child);
+			//delete child;
 			this->sugar -= sugarStart/2;
 			(*it).sugar -= sugarStart/2;
-		}
+		 }
 	}
 }
 
@@ -196,4 +210,8 @@ Sex Agent::getGender(){
 
 int Agent::getVision(){
 	return vision;
+}
+
+void Agent::addChild(Agent* child){
+	children.push_back(child);
 }
