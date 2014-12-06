@@ -27,6 +27,11 @@ Tile::Tile(int x, int y){
 }
 
 void Tile::grow(){
+	if(taken)
+		setFillColor(sf::Color::Black);
+	else
+		setFillColor(sf::Color::Green);
+
 	if(level==capacity) return;
 	level++;
 	setRadius(level);

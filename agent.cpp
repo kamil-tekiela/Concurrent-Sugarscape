@@ -1,5 +1,6 @@
 #include "agent.h"
 
+int Agent::idCounter;
 
 Agent::Agent(){
 	this->setVariables();
@@ -10,11 +11,9 @@ Agent::Agent(int x, int y){
 	this->x=			x;
 	this->y=			y;
 	this->setPosition(x*TILEW,y*TILEH);
-	this->mother = NULL;
-	this->father = NULL;
 }
 
-Agent::Agent(int x, int y, int wealth, double met, int vis, Agent* mother, Agent* father){
+Agent::Agent(int x, int y, int wealth, double met, int vis){
 	this->setVariables();
 	this->x=			x;
 	this->y=			y;
@@ -23,18 +22,18 @@ Agent::Agent(int x, int y, int wealth, double met, int vis, Agent* mother, Agent
 	this->vision=		vis;
 	this->metabolism=	met;
 	this->setPosition(x*TILEW,y*TILEH);
-	this->mother = mother;
-	this->father = father;
 }
 
 void Agent::setVariables(){
+	this->id =			++idCounter;
+	this->deleted =		false;
 	this->setFillColor(sf::Color::Red);
 	this->x =			0;
 	this->y =			0;
 	this->setPosition(x*TILEW,y*TILEH);
 	this->setRadius(RADIUS);
 	this->maxAge =		((rand()% (40 * AGEM)) + 60 * AGEM);	// 600 - 1000
-	this->age=			((rand()% (50 * AGEM))+ 0 * AGEM);;
+	this->age=			((rand()% (50 * AGEM))+ 0 * AGEM); //0 - 500
 	this->gender =		(rand()% 2) ? M : F; //shortcut for M=0 F=1;
 	this->sugar=		(rand()% 50)+50; 
 	this->sugarStart=	sugar;
@@ -44,7 +43,7 @@ void Agent::setVariables(){
 	this->endFertility =( (gender==F) ? ((rand()% (11 * AGEM))+ 40 * AGEM) : ((rand()% (11 * AGEM))+ 50 * AGEM) );
 }
 
-bool Agent::update(Tile grid[][GRIDH], boost::ptr_vector<Agent> &agent, double s){
+bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	move(grid);
 	if(vision>= s)
 	//if(this->isFertile())
@@ -52,7 +51,7 @@ bool Agent::update(Tile grid[][GRIDH], boost::ptr_vector<Agent> &agent, double s
 	else
 		setFillColor(sf::Color(0, 0, 255));
 	sugar -= metabolism;
-	age++;	
+	age++;
 
 	int xT = x+1;
 	int yT = y;
@@ -76,8 +75,8 @@ void Agent::move(Tile grid[][GRIDH]){
 	std::vector<point> points;
 	int high = 0;
 	
-	points.push_back(point(x,y,0));
-	high = grid[x][y].getSugarLvl();
+	//points.push_back(point(x,y,0));
+	//high = grid[x][y].getSugarLvl();
 
 	for(int a=x-vision; a<=x+vision; a++){
 		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
@@ -132,21 +131,24 @@ void Agent::move(Tile grid[][GRIDH]){
 	//else stay on the same tile cause you cant move
 }
 
-void Agent::sex(int xT, int yT, Tile grid[][GRIDH], boost::ptr_vector<Agent> &agent){
+void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::vector<Agent*> &agent){
 	if(grid[xT][yT].isTaken()){
 		sf::Vector2i vecT(xT,yT);
-		boost::ptr_vector<Agent>::iterator it;
 		//find agent living on this tile
+		std::vector<Agent*>::iterator it;
+		bool found= false;
 		for(it=agent.begin(); it != agent.end(); ++it){
-			if((*it).getCoord() == vecT) break;
+			if((*(*it)).getCoord() == vecT){ 
+				found = true;
+				break;
+			}
 		}
-		boost::ptr_vector<Agent>::iterator end = agent.end();
-		if(it == end)
+		if(!found)
 			return;
 		
-		Agent* a = &(*it);
+		Agent* a = (*it); //wrapper for (*(*it)) -> (*a)
 
-		if((*it).isFertile() && this->isFertile() && (*it).gender != this->gender ){
+		if((*a).isFertile() && this->isFertile() && (*a).gender != this->gender ){
 			//possible children locations
 			std::vector<sf::Vector2i> fields;
 			fields.push_back(sf::Vector2i((x+1)>=GRIDW?x+1-GRIDW:x+1, y));
@@ -167,23 +169,21 @@ void Agent::sex(int xT, int yT, Tile grid[][GRIDH], boost::ptr_vector<Agent> &ag
 			if(fieldsIt == fields.end())
 				return;
 			
-			int childMet = (rand()%2) ? this->getMetabolRate() : (*it).getMetabolRate() ;
-			int childVis = (rand()%2) ? this->vision : (*it).vision ;
+			int childMet = (rand()%2) ? this->getMetabolRate() : (*a).getMetabolRate() ;
+			int childVis = (rand()%2) ? this->vision : (*a).vision ;
 			//childMet = this->getMetabolRate() | (*it).getMetabolRate();
 			//childVis = this->vision & (*it).vision;
-			Agent *child = new Agent((*fieldsIt).x, (*fieldsIt).y, 
-									this->sugarStart/2+(*it).sugarStart/2, 
+			Agent *child =  new Agent((*fieldsIt).x, (*fieldsIt).y, 
+									this->sugarStart/2+(*a).sugarStart/2, 
 									childMet,
-									childVis,
-									this,
-									this);
+									childVis);
+			this->sugar -= this->sugarStart/2;
+			(*a).sugar -= (*a).sugarStart/2;
 			grid[(*fieldsIt).x][(*fieldsIt).y].eat();
 			agent.push_back(child);
-			(*it).addChild(child);
-			//this->addChild(child);
-			//delete child;
-			this->sugar -= sugarStart/2;
-			(*it).sugar -= sugarStart/2;
+			int childId = (*agent.back()).getId();
+			(*a).addChild(childId);
+			this->addChild(childId);
 		 }
 	}
 }
@@ -212,6 +212,32 @@ int Agent::getVision(){
 	return vision;
 }
 
-void Agent::addChild(Agent* child){
+void Agent::addChild(int child){
 	children.push_back(child);
+}
+
+void Agent::addSugar(int amount){
+	if(amount>0) sugar+= amount;
+}
+
+void Agent::leaveLegacy(std::vector<Agent*> &agent){
+	if(sugar<=0) return;
+	//what if no children?
+	int sugareach = floor(sugar/children.size());
+	std::vector<int>::iterator cit=children.begin();
+	std::vector<Agent*>::iterator it;
+	while(cit!=children.end()){
+		for(it=agent.begin(); it != agent.end(); ++it){
+			if( (*(*it)).getId() == (*cit) )
+			{
+				(*(*it)).addSugar(sugareach);
+				break;
+			}
+		}
+		++cit;
+	}
+}
+
+int Agent::getId(){
+	return id;
 }

@@ -18,6 +18,7 @@ int main()
 	double aveSugar = 0;
 	double aveVision = 0;
 	int years=0;
+	int del=0;
 
 	// we create sugarscape
 	static Tile tile[GRIDW][GRIDH];
@@ -28,7 +29,8 @@ int main()
 	}
 
 	// we create random agents
-	boost::ptr_vector<Agent> agent;
+	std::vector<Agent*> agent;
+	agent.reserve(2500);
 	//for(std::vector<Agent*>::iterator it=agent.begin(); it != agent.end(); ++it){
 	for(int i=0; i<AGENTS; i++){
 		int x,y;
@@ -65,31 +67,25 @@ int main()
 		//update
 		years++;
 
-		for(int i=0;i<GRIDW;i++){
-			for(int j=0;j<GRIDH;j++){
-				tile[i][j].grow();
-			}
-		}
-		
-		std::cout <<  agent.capacity() << '\n';
-
 		int sugar = 0;
 		double vision = 0;
 		double metabol = 0;
 		bool temp;
 		int people = 0;
-		boost::ptr_vector<Agent>::iterator it=agent.begin();
+		std::vector<Agent*>::iterator it=agent.begin();
 		while(it!=agent.end()){
 			people++;
-			temp =				(*it).update(tile, agent, aveVision);
-			sugar +=			(*it).getWealth();
-			vision +=			(*it).getVision();
-			metabol +=			(*it).getMetabolRate();
-			sf::Vector2i vecT = (*it).getCoord();
+			temp =				(*(*it)).update(tile, agent, aveVision);
+			sugar +=			(*(*it)).getWealth();
+			vision +=			(*(*it)).getVision();
+			metabol +=			(*(*it)).getMetabolRate();
+			sf::Vector2i vecT = (*(*it)).getCoord();
 			if(!temp) {
-				// //erase moves back all elements
-				it =			agent.erase(it);
+				//delete this object
+				(*(*it)).leaveLegacy(agent);
 				tile[vecT.x][vecT.y].freeUp();
+				delete (*it);
+				it = agent.erase(it);
 			}
 			else
 				++it;
@@ -99,9 +95,16 @@ int main()
 		if(agent.size()){
 			aveSugar = (int)sugar/people;
 			aveVision = vision/people;
-			//std::cout << (int)years/10 << "\t" << agent.size() << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
+			std::cout << (int)years/10 << "\t" << agent.size() << "\tTS: " << sugar << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
 		}
 		
+
+		//tile update
+		for(int i=0;i<GRIDW;i++){
+			for(int j=0;j<GRIDH;j++){
+				tile[i][j].grow();
+			}
+		}
 
 
 		//DRAW
@@ -112,8 +115,8 @@ int main()
 			window.draw(tile[i][j]);
 		}
 		
-		for(boost::ptr_vector<Agent>::iterator it=agent.begin(); it != agent.end(); ++it){
-			window.draw(*it);
+		for(std::vector<Agent*>::iterator it=agent.begin(); it != agent.end(); ++it){
+			window.draw(*(*it));
 		}
         window.display();
     }

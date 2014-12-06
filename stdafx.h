@@ -9,7 +9,6 @@
 #include "tile.h"
 #include "agent.h"
 
-#include <boost/ptr_container/ptr_vector.hpp>
 #include <stdio.h>
 #include <tchar.h>
 
@@ -32,7 +31,6 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <list>
 
 
 

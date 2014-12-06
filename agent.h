@@ -19,8 +19,6 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <list>
-#include <boost/ptr_container/ptr_vector.hpp>
 
 #include "tile.h"
 
@@ -42,6 +40,9 @@ enum Sex{
 class Agent : public sf::CircleShape 
 {
 private:
+	static int idCounter;
+	int id;
+	bool deleted;
 	int x;
 	int y;
 	double sugar;
@@ -53,28 +54,33 @@ private:
 	short int puberty;
 	short int endFertility;
 	Sex	gender; 
-	Agent* mother;
-	Agent* father;
-	std::vector<Agent*> children;
+	std::vector<int> children;
 
 	
-	void sex(int xT, int yT, Tile[][GRIDH], boost::ptr_vector<Agent>&);
+	void sex(int xT, int yT, Tile[][GRIDH], std::vector<Agent*>&);
 	void move(Tile[][GRIDH]);
 	void setVariables();
 
 public:
 	Agent();
 	Agent(int x, int y);
-	Agent(int x, int y, int wealth, double met, int vis, Agent* mother, Agent* father);
+	Agent(int x, int y, int wealth, double met, int vis);
 	
-	bool update(Tile[][GRIDH], boost::ptr_vector<Agent>&, double s);
+	bool update(Tile[][GRIDH], std::vector<Agent*>&, double s);
 	sf::Vector2i getCoord();
 	int getWealth();
 	int getMetabolRate();
 	Sex getGender();
 	bool isFertile();
 	int getVision();
-	void addChild(Agent* child);
+	void addChild(int child);
+	void addSugar(int amount);
+	/**
+	* Iterates over all children and looks for each of them in an agent vector
+	* If it is alive then give it its inheritance
+	**/
+	void leaveLegacy(std::vector<Agent*> &agent);
+	int getId();
 };
 
 struct point {
