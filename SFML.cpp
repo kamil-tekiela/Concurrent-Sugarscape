@@ -7,24 +7,94 @@
 #define TILEH 10
 #define AGENTS 400
 
+class Graph : public sf::RenderTexture {
+private: 
+	int h;
+	int w;
+	int i;
+	int prevHGraph;
+	int maxN;
+	void drawGrid(sf::Font &font){
+		sf::Text text;
+		text.setFont(font);
+		text.setCharacterSize(16);
+		text.setColor(sf::Color::White);
+
+		sf::Vertex line[] =
+		{
+			sf::Vertex(sf::Vector2f(0, h/5), sf::Color::Color(150,150,150)),
+			sf::Vertex(sf::Vector2f(w, h/5), sf::Color::Color(150,150,150))
+		};
+		draw(line, 2, sf::Lines);
+		line[0].position = sf::Vector2f(0, 2*h/5);
+		line[1].position = sf::Vector2f(w, 2*h/5);
+		draw(line, 2, sf::Lines);
+		line[0].position = sf::Vector2f(0, 3*h/5);
+		line[1].position = sf::Vector2f(w, 3*h/5);
+		draw(line, 2, sf::Lines);
+		line[0].position = sf::Vector2f(0, 4*h/5);
+		line[1].position = sf::Vector2f(w, 4*h/5);
+		draw(line, 2, sf::Lines);
+
+		text.setString(std::to_string((long double)( maxN-maxN/5 )));
+		text.setPosition(w-40, h/5);
+		draw(text);
+		text.setString(std::to_string((long double)( maxN-2*maxN/5 )));
+		text.setPosition(w-40, 2*h/5);
+		draw(text);
+		text.setString(std::to_string((long double)( maxN-3*maxN/5 )));
+		text.setPosition(w-40, 3*h/5);
+		draw(text);
+		text.setString(std::to_string((long double)( maxN-4*maxN/5 )));
+		text.setPosition(w-30, 4*h/5);
+		draw(text);
+	}
+
+public:
+	Graph();
+	Graph(int width, int height, int maxValue, sf::Font &font){
+		h=  height;
+		w = width;
+		create(w,h);
+		clear(sf::Color::Black);
+		i=0;
+		prevHGraph = h-80;
+		maxN = maxValue;
+		drawGrid(font);
+		display();
+	}
+	void plotData(int data){
+		float calcY = (float)data / maxN;
+		calcY *= h;
+		int step = i;
+		sf::Vertex line[] =
+		{
+			sf::Vertex(sf::Vector2f(i, h-calcY)),
+			sf::Vertex(sf::Vector2f(step-1, prevHGraph))
+		};
+		prevHGraph = h-calcY;
+		draw(line, 2, sf::Lines);
+		display();
+		
+		i++;
+	}
+
+};
+
 
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW*2, GRIDH*TILEH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,4,0,0));
 	//window.setFramerateLimit(30); // call it once, after creating the window
+	sf::Font font;
+	font.loadFromFile("C:\\Windows\\Fonts\\GARA.TTF");
 
-	sf::RenderTexture sideTexture;
-	sideTexture.create(500, 500);
-	sideTexture.clear(sf::Color::Black);
-	sideTexture.display();
-	int prevHGraph = 2420;
+	Graph graph(GRIDW*TILEW, GRIDH*TILEH, 2500, font);
 	
-	sf::Sprite sideSprite(sideTexture.getTexture());
+	sf::Sprite sideSprite(graph.getTexture());
 	sideSprite.setPosition(GRIDW*TILEW,0);
 
 
-	sf::Font font;
-	font.loadFromFile("C:\\Windows\\Fonts\\GARA.TTF");
 	
 	sf::Clock clock;
 	
@@ -123,22 +193,7 @@ int main()
 		}
 
 		if(years % 10==0){
-			int maxH = GRIDH*TILEH;
-			int maxW = GRIDW*TILEW;
-			if(years > maxW){
-			}
-			int maxN = 300000;
-			float calcY = (float)sugar / maxN;
-			calcY *= maxH;
-			int step = years/10;
-			sf::Vertex line[] =
-			{
-				sf::Vertex(sf::Vector2f(step, maxH-calcY)),
-				sf::Vertex(sf::Vector2f(step-1, prevHGraph))
-			};
-			prevHGraph = maxH-calcY;
-			sideTexture.draw(line, 2, sf::Lines);
-			sideTexture.display();
+			graph.plotData(agent.size());
 		}
 
 		if(agent.size()){

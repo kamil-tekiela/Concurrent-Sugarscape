@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include "targetver.h"
 #include "tile.h"
 #include "agent.h"
 
