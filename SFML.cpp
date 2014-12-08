@@ -10,8 +10,21 @@
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW, GRIDH*TILEH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,4,0,0));
-	window.setFramerateLimit(30); // call it once, after creating the window
+    sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW*2, GRIDH*TILEH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,4,0,0));
+	//window.setFramerateLimit(30); // call it once, after creating the window
+
+	sf::RenderTexture sideTexture;
+	sideTexture.create(500, 500);
+	sideTexture.clear(sf::Color::Black);
+	sideTexture.display();
+	int prevHGraph = 2420;
+	
+	sf::Sprite sideSprite(sideTexture.getTexture());
+	sideSprite.setPosition(GRIDW*TILEW,0);
+
+
+	sf::Font font;
+	font.loadFromFile("C:\\Windows\\Fonts\\GARA.TTF");
 	
 	sf::Clock clock;
 	
@@ -44,11 +57,28 @@ int main()
 	}
 		
 	sf::Time time = clock.getElapsedTime();
+	std::string str = "0";
+	sf::Text text;
+	text.setFont(font);
+	text.setString(str);
+	text.setPosition(10,10);
+	text.setCharacterSize(20);
+	text.setColor(sf::Color::Black);
+	int lastTime = time.asMilliseconds();
+	int lastFrameCount = 0;
 
 
     while (window.isOpen())
     {
 		time = clock.getElapsedTime();
+		if(time.asMilliseconds() >= lastTime+1000){
+			int fpsInt = time.asMilliseconds()-lastTime;
+			lastTime = time.asMilliseconds();
+			fpsInt = 1000 / (fpsInt / (years-lastFrameCount));
+			lastFrameCount = years;
+			str = std::to_string((long double)( fpsInt ));
+			text.setString(str);
+		}
 
         sf::Event event;
         while (window.pollEvent(event))
@@ -67,7 +97,7 @@ int main()
 		//update
 		years++;
 
-		int sugar = 0;
+		double sugar = 0;
 		double vision = 0;
 		double metabol = 0;
 		bool temp;
@@ -81,8 +111,9 @@ int main()
 			metabol +=			(*(*it)).getMetabolRate();
 			sf::Vector2i vecT = (*(*it)).getCoord();
 			if(!temp) {
-				//delete this object
+				//inheritance rule
 				(*(*it)).leaveLegacy(agent);
+				//delete this object
 				tile[vecT.x][vecT.y].freeUp();
 				delete (*it);
 				it = agent.erase(it);
@@ -91,6 +122,24 @@ int main()
 				++it;
 		}
 
+		if(years % 10==0){
+			int maxH = GRIDH*TILEH;
+			int maxW = GRIDW*TILEW;
+			if(years > maxW){
+			}
+			int maxN = 300000;
+			float calcY = (float)sugar / maxN;
+			calcY *= maxH;
+			int step = years/10;
+			sf::Vertex line[] =
+			{
+				sf::Vertex(sf::Vector2f(step, maxH-calcY)),
+				sf::Vertex(sf::Vector2f(step-1, prevHGraph))
+			};
+			prevHGraph = maxH-calcY;
+			sideTexture.draw(line, 2, sf::Lines);
+			sideTexture.display();
+		}
 
 		if(agent.size()){
 			aveSugar = (int)sugar/people;
@@ -118,6 +167,9 @@ int main()
 		for(std::vector<Agent*>::iterator it=agent.begin(); it != agent.end(); ++it){
 			window.draw(*(*it));
 		}
+
+		window.draw(sideSprite);
+		window.draw(text);
         window.display();
     }
 

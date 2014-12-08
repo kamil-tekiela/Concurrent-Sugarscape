@@ -34,7 +34,6 @@ private:
 	short int level;
 	short int capacity;
 	bool taken;
-	//Agent whoIs;
 
 public:
 	Tile();
@@ -47,7 +46,6 @@ public:
 	sf::Vector2f getCoord();
 	bool isTaken();
 	void freeUp();
-	//Agent& getAgent();
 };
 
 

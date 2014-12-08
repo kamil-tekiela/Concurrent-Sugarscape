@@ -10,33 +10,32 @@ Agent::Agent(int x, int y){
 	this->setVariables();
 	this->x=			x;
 	this->y=			y;
-	this->setPosition(x*TILEW,y*TILEH);
+	this->setPosition((float) x*TILEW, (float) y*TILEH);
 }
 
-Agent::Agent(int x, int y, int wealth, double met, int vis){
+Agent::Agent(int x, int y, double wealth, double met, int vis){
 	this->setVariables();
 	this->x=			x;
 	this->y=			y;
 	this->sugar=		wealth;
-	this->sugarStart=	wealth;
+	this->sugarStart=	(int)wealth;
 	this->vision=		vis;
 	this->metabolism=	met;
-	this->setPosition(x*TILEW,y*TILEH);
+	this->setPosition((float) x*TILEW, (float) y*TILEH);
 }
 
 void Agent::setVariables(){
 	this->id =			++idCounter;
-	this->deleted =		false;
 	this->setFillColor(sf::Color::Red);
 	this->x =			0;
 	this->y =			0;
-	this->setPosition(x*TILEW,y*TILEH);
+	this->setPosition((float) x*TILEW, (float) y*TILEH);
 	this->setRadius(RADIUS);
 	this->maxAge =		((rand()% (40 * AGEM)) + 60 * AGEM);	// 600 - 1000
 	this->age=			((rand()% (50 * AGEM))+ 0 * AGEM); //0 - 500
 	this->gender =		(rand()% 2) ? M : F; //shortcut for M=0 F=1;
 	this->sugar=		(rand()% 50)+50; 
-	this->sugarStart=	sugar;
+	this->sugarStart=	(int)sugar;
 	this->vision=		(rand()% MAXVISION)+1;
 	this->metabolism=	(rand()% MAXMETABOL)+1;
 	this->puberty =		((rand()% (4 * AGEM))+ 12 * AGEM); //12 - 15
@@ -44,7 +43,10 @@ void Agent::setVariables(){
 }
 
 bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
+	//movement rule
 	move(grid);
+
+	//coloring
 	if(vision>= s)
 	//if(this->isFertile())
 		setFillColor(sf::Color(255, 0, 0));
@@ -52,7 +54,13 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 		setFillColor(sf::Color(0, 0, 255));
 	sugar -= metabolism;
 	age++;
+	
+	//death rule
+	if(sugar <=0 || age>maxAge){
+		return false;
+	}
 
+	//mating rule
 	int xT = x+1;
 	int yT = y;
 	xT = xT>=GRIDW ? xT-GRIDW : xT;
@@ -62,12 +70,6 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	yT = yT>=GRIDH ? yT-GRIDH : yT;
 	sex(xT, yT, grid, agent);
 
-	//if(children.size())
-	//std::cout << (*children.at(0)).getVision() << std::endl;
-
-	if(sugar <=0 || age>maxAge){
-		return false;
-	}
 	return true;
 }
 
@@ -75,6 +77,7 @@ void Agent::move(Tile grid[][GRIDH]){
 	std::vector<point> points;
 	int high = 0;
 	
+	//inlcude self? agents dont move!
 	//points.push_back(point(x,y,0));
 	//high = grid[x][y].getSugarLvl();
 
@@ -112,7 +115,7 @@ void Agent::move(Tile grid[][GRIDH]){
 		//cumbersome but works
 		std::sort( points.begin(), points.end() );
 		int min = points.at(0).dist;
-		for(int i=1;i<points.size();i++){
+		for(unsigned int i=1;i<points.size();i++){
 			if(points.at(i).dist>min){
 				points.erase(points.begin()+i);
 				i--;
@@ -122,10 +125,10 @@ void Agent::move(Tile grid[][GRIDH]){
 		// if we have more then random
 		random = rand() % points.size();
 		int oldx = x; int oldy = y;
-		x= points.at(random).x;
-		y= points.at(random).y;
+		this->x= points.at(random).x;
+		this->y= points.at(random).y;
 		grid[oldx][oldy].freeUp();
-		setPosition(x*TILEW,y*TILEH);
+		setPosition((float) x*TILEW, (float) y*TILEH);
 	}
 	sugar += grid[x][y].eat();
 	//else stay on the same tile cause you cant move
@@ -169,7 +172,7 @@ void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::vector<Agent*> &agent){
 			if(fieldsIt == fields.end())
 				return;
 			
-			int childMet = (rand()%2) ? this->getMetabolRate() : (*a).getMetabolRate() ;
+			double childMet = (rand()%2) ? this->getMetabolRate() : (*a).getMetabolRate() ;
 			int childVis = (rand()%2) ? this->vision : (*a).vision ;
 			//childMet = this->getMetabolRate() | (*it).getMetabolRate();
 			//childVis = this->vision & (*it).vision;
@@ -179,7 +182,8 @@ void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::vector<Agent*> &agent){
 									childVis);
 			this->sugar -= this->sugarStart/2;
 			(*a).sugar -= (*a).sugarStart/2;
-			grid[(*fieldsIt).x][(*fieldsIt).y].eat();
+			int s = grid[(*fieldsIt).x][(*fieldsIt).y].eat();
+			child->addSugar(s);
 			agent.push_back(child);
 			int childId = (*agent.back()).getId();
 			(*a).addChild(childId);
@@ -192,11 +196,11 @@ bool Agent::isFertile(){
 	return (age>=puberty && age<endFertility && sugar>=sugarStart);
 }
 
-int Agent::getWealth(){
+double Agent::getWealth(){
 	return sugar;
 }
 
-int Agent::getMetabolRate(){
+double Agent::getMetabolRate(){
 	return metabolism;
 }
 
@@ -223,7 +227,7 @@ void Agent::addSugar(int amount){
 void Agent::leaveLegacy(std::vector<Agent*> &agent){
 	if(sugar<=0) return;
 	//what if no children?
-	int sugareach = floor(sugar/children.size());
+	int sugareach = (int)floor(sugar/children.size());
 	std::vector<int>::iterator cit=children.begin();
 	std::vector<Agent*>::iterator it;
 	while(cit!=children.end()){

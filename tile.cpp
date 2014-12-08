@@ -5,25 +5,22 @@ Tile::Tile(){
 	this->x=0;
 	this->y=0;
 	this->taken=false;
-	//this->whoIs=Agent();
 }
 
 Tile::Tile(int x, int y){
 	this->x=x;
 	this->y=y;
-	this->setPosition(x*TILEW,y*TILEH);
+	this->setPosition((float) x*TILEW, (float) y*TILEH);
 	this->setFillColor(sf::Color::Green);
 	//4 is max level of sugar (floored)
-	this->capacity = std::max<double>(0.0,(MAXLEVEL)- std::min( sqrt(std::pow((double)x-35,2)+pow((double)y-15,2)), sqrt(pow((double)x-15,2)+pow((double)y-35,2)) )/5 );
+	this->capacity = (int)std::max<double>(0.0,(MAXLEVEL)- std::min( sqrt(std::pow((double)x-35,2)+pow((double)y-15,2)), sqrt(pow((double)x-15,2)+pow((double)y-35,2)) )/5 );
 	//level = 0;
 	this->level = capacity;
 	this->setRadius(level);
 	this->taken=false;
-	//this->whoIs=Agent();
-	//this->whoIs= NULL;
 
 	int offset = MAXLEVEL-level;
-	this->setPosition(x*TILEW+offset,y*TILEH+offset);
+	this->setPosition((float) x*TILEW+offset, (float) y*TILEH+offset);
 }
 
 void Tile::grow(){
@@ -36,13 +33,13 @@ void Tile::grow(){
 	level++;
 	setRadius(level);
 	int offset = MAXLEVEL-level;
-	setPosition(x*TILEW+offset,y*TILEH+offset);
+	setPosition((float) x*TILEW+offset, (float) y*TILEH+offset);
 }
 
 int Tile::eat(){
 	taken=true;
 	int temp = level;
-	level=0;
+	level=-1;	//either 0 or -1; -1 yields better results but 0 is more correct
 	return temp;
 }
 

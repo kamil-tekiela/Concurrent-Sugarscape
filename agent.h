@@ -42,7 +42,6 @@ class Agent : public sf::CircleShape
 private:
 	static int idCounter;
 	int id;
-	bool deleted;
 	int x;
 	int y;
 	double sugar;
@@ -64,12 +63,12 @@ private:
 public:
 	Agent();
 	Agent(int x, int y);
-	Agent(int x, int y, int wealth, double met, int vis);
+	Agent(int x, int y, double wealth, double met, int vis);
 	
 	bool update(Tile[][GRIDH], std::vector<Agent*>&, double s);
 	sf::Vector2i getCoord();
-	int getWealth();
-	int getMetabolRate();
+	double getWealth();
+	double getMetabolRate();
 	Sex getGender();
 	bool isFertile();
 	int getVision();
