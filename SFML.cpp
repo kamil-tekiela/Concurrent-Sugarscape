@@ -14,40 +14,26 @@ private:
 	int i;
 	int prevHGraph;
 	int maxN;
-	void drawGrid(sf::Font &font){
+	void drawGrid(sf::Font &font, int lines=5){
 		sf::Text text;
 		text.setFont(font);
 		text.setCharacterSize(16);
 		text.setColor(sf::Color::White);
-
-		sf::Vertex line[] =
-		{
-			sf::Vertex(sf::Vector2f(0, h/5), sf::Color::Color(150,150,150)),
-			sf::Vertex(sf::Vector2f(w, h/5), sf::Color::Color(150,150,150))
+		sf::Vertex line[] = {
+			sf::Vertex(sf::Vector2f(0, 0), sf::Color::Color(150,150,150)),
+			sf::Vertex(sf::Vector2f(0, 0), sf::Color::Color(150,150,150))
 		};
-		draw(line, 2, sf::Lines);
-		line[0].position = sf::Vector2f(0, 2*h/5);
-		line[1].position = sf::Vector2f(w, 2*h/5);
-		draw(line, 2, sf::Lines);
-		line[0].position = sf::Vector2f(0, 3*h/5);
-		line[1].position = sf::Vector2f(w, 3*h/5);
-		draw(line, 2, sf::Lines);
-		line[0].position = sf::Vector2f(0, 4*h/5);
-		line[1].position = sf::Vector2f(w, 4*h/5);
-		draw(line, 2, sf::Lines);
 
-		text.setString(std::to_string((long double)( maxN-maxN/5 )));
-		text.setPosition(w-40, h/5);
-		draw(text);
-		text.setString(std::to_string((long double)( maxN-2*maxN/5 )));
-		text.setPosition(w-40, 2*h/5);
-		draw(text);
-		text.setString(std::to_string((long double)( maxN-3*maxN/5 )));
-		text.setPosition(w-40, 3*h/5);
-		draw(text);
-		text.setString(std::to_string((long double)( maxN-4*maxN/5 )));
-		text.setPosition(w-30, 4*h/5);
-		draw(text);
+		int i=lines;
+		while(--i){
+			line[0].position = sf::Vector2f(0, i*h/lines);
+			line[1].position = sf::Vector2f(w, i*h/lines);
+			draw(line, 2, sf::Lines);
+
+			text.setString(std::to_string(( maxN-i*maxN/lines )));
+			text.setPosition(w-40, i*h/lines);
+			draw(text);
+		}
 	}
 
 public:
@@ -94,8 +80,6 @@ int main()
 	sf::Sprite sideSprite(graph.getTexture());
 	sideSprite.setPosition(GRIDW*TILEW,0);
 
-
-	
 	sf::Clock clock;
 	
 	double aveSugar = 0;
@@ -206,7 +190,8 @@ int main()
 		//tile update
 		for(int i=0;i<GRIDW;i++){
 			for(int j=0;j<GRIDH;j++){
-				tile[i][j].grow();
+				//tile[i][j].grow();
+				tile[i][j].seasonalGrow(years);
 			}
 		}
 

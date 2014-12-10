@@ -31,7 +31,7 @@ class Tile : public sf::CircleShape
 private:
 	int x;
 	int y;
-	short int level;
+	float level;
 	short int capacity;
 	bool taken;
 
@@ -40,6 +40,7 @@ public:
 	Tile(int x, int y);
 	
 	void grow();
+	void seasonalGrow(int time, int seasonLen=50);
 	int eat();
 	
 	int getSugarLvl();

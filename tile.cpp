@@ -24,21 +24,36 @@ Tile::Tile(int x, int y){
 }
 
 void Tile::grow(){
-	if(taken)
+	/*if(taken)
 		setFillColor(sf::Color::Black);
 	else
-		setFillColor(sf::Color::Green);
+		setFillColor(sf::Color::Green);*/
 
-	if(level==capacity) return;
+	if(level>=capacity) return;
 	level++;
 	setRadius(level);
 	int offset = MAXLEVEL-level;
 	setPosition((float) x*TILEW+offset, (float) y*TILEH+offset);
 }
 
+void Tile::seasonalGrow(int time, int seasonLen){
+	if(level>=capacity) {
+		level = floor(level);
+		return;
+	}
+	float gamma = 8.f;
+	if((time%(2*seasonLen))/seasonLen != (int)(y< GRIDH/2))
+		level++;
+	else
+		level = level + 1.f/gamma;
+	setRadius(std::max(0, (int)level));
+	int offset = MAXLEVEL-std::max(0, (int)level);
+	setPosition((float) x*TILEW+offset, (float) y*TILEH+offset);
+}
+
 int Tile::eat(){
 	taken=true;
-	int temp = level;
+	int temp = std::max(0, (int)level);
 	level=-1;	//either 0 or -1; -1 yields better results but 0 is more correct
 	return temp;
 }
@@ -47,7 +62,7 @@ sf::Vector2f Tile::getCoord(){
 	return sf::Vector2f(float(x), float(y));
 }
 int Tile::getSugarLvl(){
-	return level;
+	return std::max(0, (int)level);
 }
 bool Tile::isTaken(){
 	return taken;
