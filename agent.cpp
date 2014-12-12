@@ -53,6 +53,8 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	else
 		setFillColor(sf::Color(0, 0, 255));
 	sugar -= metabolism;
+	//pollution
+	//grid[x][y].genPollutionM(metabolism);
 	age++;
 	
 	//death rule
@@ -98,6 +100,68 @@ void Agent::move(Tile grid[][GRIDH]){
 		int aT = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
 		if(grid[x][aT].isTaken()) continue;
 		int lvl = grid[x][aT].getSugarLvl();
+		if(lvl == high){
+			points.push_back(point(x,aT,abs(y-a)));
+		}
+		else if(lvl > high){
+			points.clear();
+			points.push_back(point(x,aT,abs(y-a)));
+			high = lvl;
+		}
+	}
+
+	int random;
+	//add while loop for concurrency
+	if(points.size()){
+		//find the largest CLOSEST sugar tile
+		//cumbersome but works
+		std::sort( points.begin(), points.end() );
+		int min = points.at(0).dist;
+		for(unsigned int i=1;i<points.size();i++){
+			if(points.at(i).dist>min){
+				points.erase(points.begin()+i);
+				i--;
+			}
+		}
+
+		// if we have more then random
+		random = rand() % points.size();
+		int oldx = x; int oldy = y;
+		this->x= points.at(random).x;
+		this->y= points.at(random).y;
+		grid[oldx][oldy].freeUp();
+		setPosition((float) x*TILEW, (float) y*TILEH);
+	}
+	sugar += grid[x][y].eat();
+	//else stay on the same tile cause you cant move
+}
+
+// code copying; only difference is the getSugarLvl to getS_Pratio()
+void Agent::moveWPollution(Tile grid[][GRIDH]){
+	std::vector<point> points;
+	int high = 0;
+	
+	//inlcude self? agents dont move!
+	//points.push_back(point(x,y,0));
+	//high = grid[x][y].getS_Pratio();
+
+	for(int a=x-vision; a<=x+vision; a++){
+		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
+		if(grid[aT][y].isTaken()) continue;
+		int lvl = grid[aT][y].getS_Pratio();
+		if(lvl == high){
+			points.push_back(point(aT,y,abs(x-a)));
+		}
+		else if(lvl > high){
+			points.clear();
+			points.push_back(point(aT,y,abs(x-a)));
+			high = lvl;
+		}
+	}
+	for(int a=y-vision; a<=y+vision; a++){
+		int aT = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
+		if(grid[x][aT].isTaken()) continue;
+		int lvl = grid[x][aT].getS_Pratio();
 		if(lvl == high){
 			points.push_back(point(x,aT,abs(y-a)));
 		}

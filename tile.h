@@ -23,6 +23,9 @@
 #define MAXLEVEL 5
 #define TILEW 10
 #define TILEH 10
+#define POLLUTIONALPHA 1
+#define POLLUTIONBETA 1
+#define DIFFUSION 1
 
 class Agent;
 
@@ -34,19 +37,26 @@ private:
 	float level;
 	short int capacity;
 	bool taken;
+	
+	void pollutionDiffusion(Tile grid[][GRIDH]);
 
 public:
+	float pollution;
+
 	Tile();
 	Tile(int x, int y);
 	
 	void grow();
-	void seasonalGrow(int time, int seasonLen=50);
+	void seasonalGrow(int time, Tile grid[][GRIDH], int seasonLen=50);
 	int eat();
 	
 	int getSugarLvl();
+	float getS_Pratio();
 	sf::Vector2f getCoord();
 	bool isTaken();
 	void freeUp();
+	void genPollutionM(float amount);
+	void genPollutionG(float amount);
 };
 
 

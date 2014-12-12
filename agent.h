@@ -58,6 +58,7 @@ private:
 	
 	void sex(int xT, int yT, Tile[][GRIDH], std::vector<Agent*>&);
 	void move(Tile[][GRIDH]);
+	void moveWPollution(Tile[][GRIDH]);
 	void setVariables();
 
 public:

@@ -30,7 +30,7 @@ private:
 			line[1].position = sf::Vector2f(w, i*h/lines);
 			draw(line, 2, sf::Lines);
 
-			text.setString(std::to_string(( maxN-i*maxN/lines )));
+			text.setString(std::to_string((long long)( maxN-i*maxN/lines )));
 			text.setPosition(w-40, i*h/lines);
 			draw(text);
 		}
@@ -183,6 +183,9 @@ int main()
 		if(agent.size()){
 			aveSugar = (int)sugar/people;
 			aveVision = vision/people;
+			//std::cout << "   " << tile[25][24].pollution << "   " << std::endl;
+			//std::cout << tile[24][25].pollution << " " << tile[25][25].pollution << " " << tile[26][25].pollution << std::endl;
+			//std::cout << "   " << tile[25][26].pollution << "   " << std::endl;
 			std::cout << (int)years/10 << "\t" << agent.size() << "\tTS: " << sugar << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
 		}
 		
@@ -191,7 +194,7 @@ int main()
 		for(int i=0;i<GRIDW;i++){
 			for(int j=0;j<GRIDH;j++){
 				//tile[i][j].grow();
-				tile[i][j].seasonalGrow(years);
+				tile[i][j].seasonalGrow(years, tile);
 			}
 		}
 
