@@ -14,6 +14,7 @@ Tile::Tile(int x, int y){
 	this->setFillColor(sf::Color::Green);
 	//4 is max level of sugar (floored)
 	this->capacity =	(int)std::max<double>(0.0,(MAXLEVEL)- std::min( sqrt(std::pow((double)x-35,2)+pow((double)y-15,2)), sqrt(pow((double)x-15,2)+pow((double)y-35,2)) )/5 );
+	//this->capacity =	MAXLEVEL;
 	this->level =		capacity;
 	this->setRadius(level);
 	this->taken=		false;

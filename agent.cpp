@@ -13,7 +13,7 @@ Agent::Agent(int x, int y){
 	this->setPosition((float) x*TILEW, (float) y*TILEH);
 }
 
-Agent::Agent(int x, int y, double wealth, double met, int vis){
+Agent::Agent(int x, int y, double wealth, double met, int vis, TagString tags){
 	this->setVariables();
 	this->x=			x;
 	this->y=			y;
@@ -22,6 +22,7 @@ Agent::Agent(int x, int y, double wealth, double met, int vis){
 	this->vision=		vis;
 	this->metabolism=	met;
 	this->setPosition((float) x*TILEW, (float) y*TILEH);
+	this->tagString =	tags;
 }
 
 void Agent::setVariables(){
@@ -47,11 +48,10 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	move(grid);
 
 	//coloring
-	if(vision>= s)
-	//if(this->isFertile())
-		setFillColor(sf::Color(255, 0, 0));
-	else
+	if(tagString.getGroup())
 		setFillColor(sf::Color(0, 0, 255));
+	else
+		setFillColor(sf::Color(255, 0, 0));
 	sugar -= metabolism;
 	//pollution
 	//grid[x][y].genPollutionM(metabolism);
@@ -66,11 +66,43 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	int xT = x+1;
 	int yT = y;
 	xT = xT>=GRIDW ? xT-GRIDW : xT;
-	sex(xT, yT, grid, agent);
+	if(grid[xT][yT].isTaken()){
+		sf::Vector2i vecT(xT,yT);
+		//find agent living on this tile
+		std::vector<Agent*>::iterator it;
+		bool found= false;
+		for(it=agent.begin(); it != agent.end(); ++it){
+			if((*(*it)).getCoord() == vecT){ 
+				found = true;
+				break;
+			}
+		}
+		if(found){
+			Agent* a = (*it); //wrapper for (*(*it)) -> (*a)
+			sex(xT, yT, grid, agent, a);
+			tagString.affected((*a).tagString);
+		}
+	}
 	xT = x;
 	yT = y+1;
 	yT = yT>=GRIDH ? yT-GRIDH : yT;
-	sex(xT, yT, grid, agent);
+	if(grid[xT][yT].isTaken()){
+		sf::Vector2i vecT(xT,yT);
+		//find agent living on this tile
+		std::vector<Agent*>::iterator it;
+		bool found= false;
+		for(it=agent.begin(); it != agent.end(); ++it){
+			if((*(*it)).getCoord() == vecT){ 
+				found = true;
+				break;
+			}
+		}
+		if(found){
+			Agent* a = (*it); //wrapper for (*(*it)) -> (*a)
+			sex(xT, yT, grid, agent, a);
+			tagString.affected((*a).tagString);
+		}
+	}
 
 	return true;
 }
@@ -198,61 +230,50 @@ void Agent::moveWPollution(Tile grid[][GRIDH]){
 	//else stay on the same tile cause you cant move
 }
 
-void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::vector<Agent*> &agent){
-	if(grid[xT][yT].isTaken()){
-		sf::Vector2i vecT(xT,yT);
-		//find agent living on this tile
-		std::vector<Agent*>::iterator it;
-		bool found= false;
-		for(it=agent.begin(); it != agent.end(); ++it){
-			if((*(*it)).getCoord() == vecT){ 
-				found = true;
+void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::vector<Agent*> &agent, Agent* &a){
+	
+
+	if((*a).isFertile() && this->isFertile() && (*a).gender != this->gender ){
+		//possible children locations
+		std::vector<sf::Vector2i> fields;
+		fields.push_back(sf::Vector2i((x+1)>=GRIDW?x+1-GRIDW:x+1, y));
+		fields.push_back(sf::Vector2i((x-1)<0?x-1+GRIDW:x-1, y));
+		fields.push_back(sf::Vector2i(x, (y+1)>=GRIDH?y+1-GRIDH:y+1));
+		fields.push_back(sf::Vector2i(x, (y-1)<0?y-1+GRIDH:y-1));
+		fields.push_back(sf::Vector2i((xT+1)>=GRIDW?xT+1-GRIDW:xT+1, yT));
+		fields.push_back(sf::Vector2i((xT-1)<0?xT-1+GRIDW:xT-1, yT));
+		fields.push_back(sf::Vector2i(xT, (yT+1)>=GRIDH?yT+1-GRIDH:yT+1));
+		fields.push_back(sf::Vector2i(xT, (yT-1)<0?yT-1+GRIDH:yT-1));
+		std::vector<sf::Vector2i>::iterator fieldsIt=  fields.begin();
+		while(fieldsIt != fields.end()){
+			if(!grid[(*fieldsIt).x][(*fieldsIt).y].isTaken()){
 				break;
 			}
+			fieldsIt++;
 		}
-		if(!found)
+		if(fieldsIt == fields.end())
 			return;
-		
-		Agent* a = (*it); //wrapper for (*(*it)) -> (*a)
-
-		if((*a).isFertile() && this->isFertile() && (*a).gender != this->gender ){
-			//possible children locations
-			std::vector<sf::Vector2i> fields;
-			fields.push_back(sf::Vector2i((x+1)>=GRIDW?x+1-GRIDW:x+1, y));
-			fields.push_back(sf::Vector2i((x-1)<0?x-1+GRIDW:x-1, y));
-			fields.push_back(sf::Vector2i(x, (y+1)>=GRIDH?y+1-GRIDH:y+1));
-			fields.push_back(sf::Vector2i(x, (y-1)<0?y-1+GRIDH:y-1));
-			fields.push_back(sf::Vector2i((xT+1)>=GRIDW?xT+1-GRIDW:xT+1, yT));
-			fields.push_back(sf::Vector2i((xT-1)<0?xT-1+GRIDW:xT-1, yT));
-			fields.push_back(sf::Vector2i(xT, (yT+1)>=GRIDH?yT+1-GRIDH:yT+1));
-			fields.push_back(sf::Vector2i(xT, (yT-1)<0?yT-1+GRIDH:yT-1));
-			std::vector<sf::Vector2i>::iterator fieldsIt=  fields.begin();
-			while(fieldsIt != fields.end()){
-				if(!grid[(*fieldsIt).x][(*fieldsIt).y].isTaken()){
-					break;
-				}
-				fieldsIt++;
-			}
-			if(fieldsIt == fields.end())
-				return;
 			
-			double childMet = (rand()%2) ? this->getMetabolRate() : (*a).getMetabolRate() ;
-			int childVis = (rand()%2) ? this->vision : (*a).vision ;
-			//childMet = this->getMetabolRate() | (*it).getMetabolRate();
-			//childVis = this->vision & (*it).vision;
-			Agent *child =  new Agent((*fieldsIt).x, (*fieldsIt).y, 
-									this->sugarStart/2+(*a).sugarStart/2, 
-									childMet,
-									childVis);
-			this->sugar -= this->sugarStart/2;
-			(*a).sugar -= (*a).sugarStart/2;
-			int s = grid[(*fieldsIt).x][(*fieldsIt).y].eat();
-			child->addSugar(s);
-			agent.push_back(child);
-			int childId = (*agent.back()).getId();
-			(*a).addChild(childId);
-			this->addChild(childId);
-		 }
+		double childMet = (rand()%2) ? this->getMetabolRate() : (*a).getMetabolRate() ;
+		int childVis = (rand()%2) ? this->vision : (*a).vision ;
+		TagString tempTag;
+		tempTag.setFromParents(this->tagString, (*a).tagString);
+
+		//childMet = this->getMetabolRate() | (*it).getMetabolRate();
+		//childVis = this->vision & (*it).vision;
+		Agent *child =  new Agent((*fieldsIt).x, (*fieldsIt).y, 
+								this->sugarStart/2+(*a).sugarStart/2, 
+								childMet,
+								childVis,
+								tempTag);
+		this->sugar -= this->sugarStart/2;
+		(*a).sugar -= (*a).sugarStart/2;
+		int s = grid[(*fieldsIt).x][(*fieldsIt).y].eat();
+		child->addSugar(s);
+		agent.push_back(child);
+		int childId = (*agent.back()).getId();
+		(*a).addChild(childId);
+		this->addChild(childId);
 	}
 }
 

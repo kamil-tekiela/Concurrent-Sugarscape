@@ -21,6 +21,7 @@
 #include <algorithm>
 
 #include "tile.h"
+#include "tagString.h"
 
 
 #define GRIDW 50
@@ -29,7 +30,7 @@
 #define TILEW 10
 #define TILEH 10
 #define MAXVISION 5
-#define MAXMETABOL 5
+#define MAXMETABOL 4
 #define AGEM 10
 
 enum Sex{
@@ -52,19 +53,22 @@ private:
 	short int age;
 	short int puberty;
 	short int endFertility;
-	Sex	gender; 
+	Sex	gender;
 	std::vector<int> children;
 
 	
-	void sex(int xT, int yT, Tile[][GRIDH], std::vector<Agent*>&);
+	void sex(int xT, int yT, Tile[][GRIDH], std::vector<Agent*>&, Agent* &a);
 	void move(Tile[][GRIDH]);
 	void moveWPollution(Tile[][GRIDH]);
 	void setVariables();
 
 public:
+	TagString tagString;
+
+public:
 	Agent();
 	Agent(int x, int y);
-	Agent(int x, int y, double wealth, double met, int vis);
+	Agent(int x, int y, double wealth, double met, int vis, TagString tags);
 	
 	bool update(Tile[][GRIDH], std::vector<Agent*>&, double s);
 	sf::Vector2i getCoord();

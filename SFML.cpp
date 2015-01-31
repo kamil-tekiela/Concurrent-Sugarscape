@@ -6,6 +6,8 @@
 #define TILEW 10
 #define TILEH 10
 #define AGENTS 400
+#define HISTOGRAMH 200
+#define TAGCOUNT 11
 
 class Graph : public sf::RenderTexture {
 private: 
@@ -67,10 +69,66 @@ public:
 
 };
 
+class Histogram : public sf::Drawable, sf::Transformable {
+private: 
+	int w,h;
+	int x,y;
+	sf::RectangleShape clearRect;
+    sf::VertexArray rectangles;
+
+public:
+	Histogram();
+	Histogram(float x, float y, int width, int height){
+		h = height;
+		w = width;
+		this->x = x;
+		this->y = y;
+		clearRect.setSize(sf::Vector2f(width, height));
+		clearRect.setFillColor(sf::Color::Black);
+		clearRect.setPosition(x,y);
+		
+        rectangles.setPrimitiveType(sf::Quads);
+        rectangles.resize(TAGCOUNT * 4);
+	}
+	void plotData(int data[TAGCOUNT], int agentsTotal){
+		float calcY; 
+		float calcX = w/TAGCOUNT;
+		for(int i=0; i<TAGCOUNT; i++)
+		{
+			calcY = (float)data[i] / agentsTotal;
+			calcY *= h;
+
+			// get a pointer to the current tile's quad
+            sf::Vertex* quad = &rectangles[i * 4];
+
+            // define its 4 corners
+            quad[0].position = sf::Vector2f(x + calcX*i, y + (h-calcY));//top left
+            quad[1].position = sf::Vector2f(x + calcX*i + calcX, y + (h-calcY));
+			quad[2].position = sf::Vector2f(x + calcX*i + calcX, y + h);
+            quad[3].position = sf::Vector2f(x + calcX*i, y + h);
+
+            quad[0].color = sf::Color::Red;
+            quad[1].color = sf::Color::Red;
+            quad[2].color = sf::Color::Red;
+            quad[3].color = sf::Color::Red;
+
+		}
+	}
+	void draw(sf::RenderTarget& target, sf::RenderStates states) const
+	{
+		states.transform *= getTransform();
+		states.texture = NULL;
+		
+		target.draw(clearRect, states);
+		target.draw(rectangles, states);
+	}
+
+};
+
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW*2, GRIDH*TILEH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,4,0,0));
+    sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW*2, GRIDH*TILEH+HISTOGRAMH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,4,0,0));
 	//window.setFramerateLimit(30); // call it once, after creating the window
 	sf::Font font;
 	font.loadFromFile("C:\\Windows\\Fonts\\GARA.TTF");
@@ -79,6 +137,18 @@ int main()
 	
 	sf::Sprite sideSprite(graph.getTexture());
 	sideSprite.setPosition(GRIDW*TILEW,0);
+	
+	int screenHeight = (GRIDH*TILEH+HISTOGRAMH);
+	sf::View normalView(sf::FloatRect(0, 0, GRIDW*TILEW*2, GRIDH*TILEH));
+	normalView.setViewport(sf::FloatRect(0, 0, 1.0f, (float)(GRIDH*TILEH)/screenHeight));
+	sf::View histogramView(sf::FloatRect(0, GRIDH*TILEH, GRIDW*TILEW*2, HISTOGRAMH));
+	histogramView.setViewport(sf::FloatRect(0, (float)(GRIDH*TILEH)/screenHeight, 1.0f, (float)(HISTOGRAMH)/screenHeight));
+	sf::RectangleShape lineSeparator(sf::Vector2f(GRIDW*TILEW*2, 2));
+	lineSeparator.setFillColor(sf::Color::Cyan);
+	lineSeparator.setPosition(0, GRIDH*TILEH);
+	
+	int histogramData[TAGCOUNT];
+	Histogram histogram(GRIDW*TILEW, GRIDH*TILEH+2, GRIDW*TILEW, HISTOGRAMH-2);
 
 	sf::Clock clock;
 	
@@ -120,18 +190,21 @@ int main()
 	text.setColor(sf::Color::Black);
 	int lastTime = time.asMilliseconds();
 	int lastFrameCount = 0;
+	int fpsInt=0;
 
-
+	/////////////////////////////////////////////////////////////////////////////
+	//***************************************************************************
+	/////////////////////////////////////////////////////////////////////////////
     while (window.isOpen())
     {
 		time = clock.getElapsedTime();
 		if(time.asMilliseconds() >= lastTime+1000){
-			int fpsInt = time.asMilliseconds()-lastTime;
+			fpsInt = time.asMilliseconds()-lastTime;
 			lastTime = time.asMilliseconds();
 			fpsInt = 1000 / (fpsInt / (years-lastFrameCount));
 			lastFrameCount = years;
-			str = std::to_string((long double)( fpsInt ));
-			text.setString(str);
+			str = std::to_string((long long)( fpsInt ));
+			text.setString(str+" FPS");
 		}
 
         sf::Event event;
@@ -151,6 +224,11 @@ int main()
 		//update
 		years++;
 
+		for(int i=0;i<TAGCOUNT;i++)
+		{ 
+			histogramData[i]=0;
+		}
+
 		double sugar = 0;
 		double vision = 0;
 		double metabol = 0;
@@ -161,9 +239,15 @@ int main()
 			people++;
 			temp =				(*(*it)).update(tile, agent, aveVision);
 			sugar +=			(*(*it)).getWealth();
+			//sugar +=			(*(*it)).tagString.getGroup();
 			vision +=			(*(*it)).getVision();
 			metabol +=			(*(*it)).getMetabolRate();
 			sf::Vector2i vecT = (*(*it)).getCoord();
+			for(int i=0;i<TAGCOUNT;i++)
+			{ 
+				histogramData[i] += (*(*it)).tagString.tags[i];//collect tagStrings for histogram data; no abstraction
+			}
+
 			if(!temp) {
 				//inheritance rule
 				(*(*it)).leaveLegacy(agent);
@@ -179,6 +263,7 @@ int main()
 		if(years % 10==0){
 			graph.plotData(agent.size());
 		}
+		histogram.plotData(histogramData, people);
 
 		if(agent.size()){
 			aveSugar = (int)sugar/people;
@@ -201,6 +286,12 @@ int main()
 
 		//DRAW
         window.clear(sf::Color::White);
+
+		window.setView(histogramView);
+		window.draw(lineSeparator);
+		window.draw(histogram);
+
+		window.setView(normalView);
 
 		for(int i=0;i<GRIDW;i++)
 		for(int j=0;j<GRIDH;j++){
