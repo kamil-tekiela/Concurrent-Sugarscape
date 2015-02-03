@@ -272,8 +272,7 @@ int main()
 					Agent * a = agents[x][y];
 					sf::Vector2i vecT = (*a).getCoord();
 					if((*a).toDelete){
-						(*a).leaveLegacy(agents);
-
+						tile[vecT.x][vecT.y].freeUp();
 						delete a;
 					}
 					else{//move
@@ -293,11 +292,11 @@ int main()
 			it = newAgent.end();
 		}
 		//clear
-		/*for(int x=0; x<GRIDW; x++){
+		for(int x=0; x<GRIDW; x++){
 			for(int y=0; y<GRIDH; y++){
 				agents[x][y] = NULL;
 			}
-		}*/
+		}
 		//swap back array values
 		for(int x=0; x<GRIDW; x++){
 			for(int y=0; y<GRIDH; y++){

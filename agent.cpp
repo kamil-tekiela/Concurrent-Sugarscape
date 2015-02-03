@@ -2,38 +2,6 @@
 
 int Agent::idCounter;
 
-//helper function
-Agent* whoOwnTile(int x, int y, Agent* agents[GRIDW][GRIDH]){
-	int i = (x-MAXVISION)<0 ? (x-MAXVISION)+GRIDW : x-MAXVISION;
-	int xLimit = (x+MAXVISION)>=GRIDW ? (x+MAXVISION)-GRIDW : x+MAXVISION;
-	int j = (y-MAXVISION)<0 ? (y-MAXVISION)+GRIDH : y-MAXVISION;
-	int yLimit = (y+MAXVISION)==GRIDH ? (y+MAXVISION)-GRIDH : y+MAXVISION;
-	for(i; i<xLimit; i++)
-		for(j; j<yLimit; j++)
-			if(agents[i][j])
-				if(agents[i][j]->getCoord()==sf::Vector2i(x,y)) 
-					return agents[i][j];
-	return NULL;
-}
-
-bool isVulnerableToRetalation(int x, int y, Agent* agents[GRIDW][GRIDH], int myWealth, int myVision){
-	int xOffset = -myVision;
-	int yOffset = -myVision;
-	for(xOffset; xOffset<myVision; xOffset++){
-		int i = (x+xOffset);
-		i = i<0 ? i+GRIDW : ((i>=GRIDW) ? i-GRIDW : i);
-		for(yOffset; yOffset<myVision; yOffset++)
-		{
-			if(xOffset * yOffset) continue;//one of offsets must be 0
-			int j = (y+yOffset);
-			j = j<0 ? j+GRIDW : ((j>=GRIDW) ? j-GRIDW : j);
-			if(agents[i][j] && agents[i][j]->getWealth() > myWealth) return true;
-		}
-	}
-}
-
-
-
 Agent::Agent(){
 	this->setVariables();
 }
@@ -79,9 +47,8 @@ void Agent::setVariables(){
 
 bool Agent::update(Tile grid[][GRIDH], Agent* agents[GRIDW][GRIDH], double s, std::vector<Agent*>& newAgent){
 	//movement rule
-	//move(grid);	//collecting inside
+	move(grid);	//collecting inside
 	//moveWPollution(grid);
-	moveWCombat(grid, agents);
 
 	//coloring
 	if(tagString.getGroup())
@@ -96,6 +63,7 @@ bool Agent::update(Tile grid[][GRIDH], Agent* agents[GRIDW][GRIDH], double s, st
 	//death rule
 	if(sugar <=0 || age>maxAge){
 		toDelete = true;
+		leaveLegacy(agents);
 		return false;
 	}
 
@@ -238,58 +206,33 @@ void Agent::moveWPollution(Tile grid[][GRIDH]){
 	//else stay on the same tile cause you cant move
 }
 // code copying; only difference is the getSugarLvl
-void Agent::moveWCombat(Tile grid[][GRIDH], Agent* agents[][GRIDH]){
-	std::vector<pointWCombat> points;
+void Agent::moveWCombat(Tile grid[][GRIDH]){
+	std::vector<point> points;
 	int high = 0;
-	int myGroup = tagString.getGroup();
 
 	for(int a=x-vision; a<=x+vision; a++){
 		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
-		Agent* temp = whoOwnTile(aT, y, agents);
-		//assert(grid[aT][y].isTaken() && temp);
-		if(grid[aT][y].isTaken()){//NULL is only if child is encountered
-			if((temp==NULL 
-				|| temp->tagString.getGroup()==myGroup 
-				|| temp->getWealth() > this->getWealth() 
-				|| isVulnerableToRetalation(aT, y, agents, this->getWealth(), this->getVision()) ) ) 
-			continue;
-		}
-		int lvl = grid[aT][y].getSugarLvl();
-		int sugarBonus = 0;
-		if(temp)//if occupied
-			sugarBonus = MIN(temp->getWealth(), LOOTLIMIT);
-		lvl += sugarBonus;
+		if(grid[aT][y].isTaken()) continue;
+		int lvl = grid[aT][y].getS_Pratio();
 		if(lvl == high){
-			points.push_back(pointWCombat(aT,y,abs(x-a), sugarBonus, temp));
+			points.push_back(point(aT,y,abs(x-a)));
 		}
 		else if(lvl > high){
 			points.clear();
-			points.push_back(pointWCombat(aT,y,abs(x-a), sugarBonus, temp));
+			points.push_back(point(aT,y,abs(x-a)));
 			high = lvl;
 		}
 	}
-	//same for y axis vision
 	for(int a=y-vision; a<=y+vision; a++){
 		int aT = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
-		Agent* temp = whoOwnTile(x, aT, agents);
-		if(grid[x][aT].isTaken()){//NULL is only if child is encountered
-			if((temp==NULL 
-				|| temp->tagString.getGroup()==myGroup 
-				|| temp->getWealth() > this->getWealth() 
-				|| isVulnerableToRetalation(aT, y, agents, this->getWealth(), this->getVision()) ) ) 
-			continue;
-		}
-		int lvl = grid[x][aT].getSugarLvl();
-		int sugarBonus = 0;
-		if(temp)//if occupied
-			sugarBonus = MIN(temp->getWealth(), LOOTLIMIT);
-		lvl += sugarBonus;
+		if(grid[x][aT].isTaken()) continue;
+		int lvl = grid[x][aT].getS_Pratio();
 		if(lvl == high){
-			points.push_back(pointWCombat(x,aT,abs(y-a), sugarBonus, temp));
+			points.push_back(point(x,aT,abs(y-a)));
 		}
 		else if(lvl > high){
 			points.clear();
-			points.push_back(pointWCombat(x,aT,abs(y-a), sugarBonus, temp));
+			points.push_back(point(x,aT,abs(y-a)));
 			high = lvl;
 		}
 	}
@@ -299,7 +242,7 @@ void Agent::moveWCombat(Tile grid[][GRIDH], Agent* agents[][GRIDH]){
 	if(points.size()){
 		//find the largest CLOSEST sugar tile
 		//cumbersome but works
-		std::sort( points.begin(), points.end() );//sort calls point's operator >
+		std::sort( points.begin(), points.end() );
 		int min = points.at(0).dist;
 		for(unsigned int i=1;i<points.size();i++){
 			if(points.at(i).dist>min){
@@ -313,9 +256,6 @@ void Agent::moveWCombat(Tile grid[][GRIDH], Agent* agents[][GRIDH]){
 		int oldx = x; int oldy = y;
 		this->x= points.at(random).x;
 		this->y= points.at(random).y;
-		if(points.at(random).agent!=NULL)//prevent NULL data where the new position was empty
-			points.at(random).agent->kill( points.at(random).sugar );//
-		this->addSugar(points.at(random).sugar);//
 		grid[oldx][oldy].freeUp();
 		setPosition((float) x*TILEW, (float) y*TILEH);
 	}
@@ -427,10 +367,4 @@ void Agent::leaveLegacy(Agent* agents[GRIDW][GRIDH]){
 
 int Agent::getId(){
 	return id;
-}
-
-void Agent::kill(int sugarTaken){
-	sugar-= sugarTaken>sugar ? sugar : sugarTaken;
-	toDelete=true;
-	std::cout << "Killed: " << sugarTaken << std::endl;
 }

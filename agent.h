@@ -33,7 +33,6 @@
 #define MAXVISION 5
 #define MAXMETABOL 4
 #define AGEM 10
-#define LOOTLIMIT 100000
 
 enum Sex{
 	M,
@@ -62,7 +61,7 @@ private:
 	void sex(int xT, int yT, Tile[][GRIDH], Agent* &a, std::vector<Agent*>& newAgent);
 	void move(Tile[][GRIDH]);
 	void moveWPollution(Tile[][GRIDH]);
-	void moveWCombat(Tile[][GRIDH], Agent* agents[][GRIDH]);
+	void moveWCombat(Tile[][GRIDH]);
 	void setVariables();
 
 public:
@@ -89,7 +88,6 @@ public:
 	**/
 	void leaveLegacy(Agent* agents[GRIDW][GRIDH]);
 	int getId();
-	void kill(int sugarTaken=0);
 };
 
 struct point {
@@ -101,18 +99,3 @@ struct point {
     	return dist < val.dist; 
     }
 };
-
-struct pointWCombat {
-	int x;
-	int y;
-	Agent* agent;
-	int sugar;
-	int dist;
-	pointWCombat(int px, int py, int pdist, int psugar, Agent* pagent){x=px;y=py;dist=pdist;sugar=psugar;agent=pagent;}
-	bool operator<( const pointWCombat& val ) const { 
-    	return dist < val.dist; 
-    }
-};
-
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
