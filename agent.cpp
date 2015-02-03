@@ -37,18 +37,15 @@ void Agent::setVariables(){
 	this->gender =		(rand()% 2) ? M : F; //shortcut for M=0 F=1;
 	this->sugar=		(rand()% 50)+50; 
 	this->sugarStart=	(int)sugar;
-	assert(sugar==sugarStart);
 	this->vision=		(rand()% MAXVISION)+1;
 	this->metabolism=	(rand()% MAXMETABOL)+1;
 	this->puberty =		((rand()% (4 * AGEM))+ 12 * AGEM); //12 - 15
 	this->endFertility =( (gender==F) ? ((rand()% (11 * AGEM))+ 40 * AGEM) : ((rand()% (11 * AGEM))+ 50 * AGEM) );
-	toDelete = false;
 }
 
-bool Agent::update(Tile grid[][GRIDH], Agent* agents[GRIDW][GRIDH], double s, std::vector<Agent*>& newAgent){
+bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	//movement rule
-	move(grid);	//collecting inside
-	//moveWPollution(grid);
+	move(grid);
 
 	//coloring
 	if(tagString.getGroup())
@@ -62,8 +59,6 @@ bool Agent::update(Tile grid[][GRIDH], Agent* agents[GRIDW][GRIDH], double s, st
 	
 	//death rule
 	if(sugar <=0 || age>maxAge){
-		toDelete = true;
-		leaveLegacy(agents);
 		return false;
 	}
 
@@ -72,9 +67,19 @@ bool Agent::update(Tile grid[][GRIDH], Agent* agents[GRIDW][GRIDH], double s, st
 	int yT = y;
 	xT = xT>=GRIDW ? xT-GRIDW : xT;
 	if(grid[xT][yT].isTaken()){
-		if(agents[xT][yT]){
-			Agent* a = agents[xT][yT];
-			sex(xT, yT, grid, a, newAgent);
+		sf::Vector2i vecT(xT,yT);
+		//find agent living on this tile
+		std::vector<Agent*>::iterator it;
+		bool found= false;
+		for(it=agent.begin(); it != agent.end(); ++it){
+			if((*(*it)).getCoord() == vecT){ 
+				found = true;
+				break;
+			}
+		}
+		if(found){
+			Agent* a = (*it); //wrapper for (*(*it)) -> (*a)
+			sex(xT, yT, grid, agent, a);
 			tagString.affected((*a).tagString);
 		}
 	}
@@ -82,9 +87,19 @@ bool Agent::update(Tile grid[][GRIDH], Agent* agents[GRIDW][GRIDH], double s, st
 	yT = y+1;
 	yT = yT>=GRIDH ? yT-GRIDH : yT;
 	if(grid[xT][yT].isTaken()){
-		if(agents[xT][yT]){
-			Agent* a = agents[xT][yT];
-			sex(xT, yT, grid, a, newAgent);
+		sf::Vector2i vecT(xT,yT);
+		//find agent living on this tile
+		std::vector<Agent*>::iterator it;
+		bool found= false;
+		for(it=agent.begin(); it != agent.end(); ++it){
+			if((*(*it)).getCoord() == vecT){ 
+				found = true;
+				break;
+			}
+		}
+		if(found){
+			Agent* a = (*it); //wrapper for (*(*it)) -> (*a)
+			sex(xT, yT, grid, agent, a);
 			tagString.affected((*a).tagString);
 		}
 	}
@@ -95,6 +110,10 @@ bool Agent::update(Tile grid[][GRIDH], Agent* agents[GRIDW][GRIDH], double s, st
 void Agent::move(Tile grid[][GRIDH]){
 	std::vector<point> points;
 	int high = 0;
+	
+	//inlcude self? agents dont move!
+	//points.push_back(point(x,y,0));
+	//high = grid[x][y].getSugarLvl();
 
 	for(int a=x-vision; a<=x+vision; a++){
 		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
@@ -122,7 +141,7 @@ void Agent::move(Tile grid[][GRIDH]){
 			high = lvl;
 		}
 	}
-	
+
 	int random;
 	//add while loop for concurrency
 	if(points.size()){
@@ -148,10 +167,15 @@ void Agent::move(Tile grid[][GRIDH]){
 	sugar += grid[x][y].eat();
 	//else stay on the same tile cause you cant move
 }
+
 // code copying; only difference is the getSugarLvl to getS_Pratio()
 void Agent::moveWPollution(Tile grid[][GRIDH]){
 	std::vector<point> points;
 	int high = 0;
+	
+	//inlcude self? agents dont move!
+	//points.push_back(point(x,y,0));
+	//high = grid[x][y].getS_Pratio();
 
 	for(int a=x-vision; a<=x+vision; a++){
 		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
@@ -205,65 +229,9 @@ void Agent::moveWPollution(Tile grid[][GRIDH]){
 	sugar += grid[x][y].eat();
 	//else stay on the same tile cause you cant move
 }
-// code copying; only difference is the getSugarLvl
-void Agent::moveWCombat(Tile grid[][GRIDH]){
-	std::vector<point> points;
-	int high = 0;
 
-	for(int a=x-vision; a<=x+vision; a++){
-		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
-		if(grid[aT][y].isTaken()) continue;
-		int lvl = grid[aT][y].getS_Pratio();
-		if(lvl == high){
-			points.push_back(point(aT,y,abs(x-a)));
-		}
-		else if(lvl > high){
-			points.clear();
-			points.push_back(point(aT,y,abs(x-a)));
-			high = lvl;
-		}
-	}
-	for(int a=y-vision; a<=y+vision; a++){
-		int aT = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
-		if(grid[x][aT].isTaken()) continue;
-		int lvl = grid[x][aT].getS_Pratio();
-		if(lvl == high){
-			points.push_back(point(x,aT,abs(y-a)));
-		}
-		else if(lvl > high){
-			points.clear();
-			points.push_back(point(x,aT,abs(y-a)));
-			high = lvl;
-		}
-	}
-
-	int random;
-	//add while loop for concurrency
-	if(points.size()){
-		//find the largest CLOSEST sugar tile
-		//cumbersome but works
-		std::sort( points.begin(), points.end() );
-		int min = points.at(0).dist;
-		for(unsigned int i=1;i<points.size();i++){
-			if(points.at(i).dist>min){
-				points.erase(points.begin()+i);
-				i--;
-			}
-		}
-
-		// if we have more then random
-		random = rand() % points.size();
-		int oldx = x; int oldy = y;
-		this->x= points.at(random).x;
-		this->y= points.at(random).y;
-		grid[oldx][oldy].freeUp();
-		setPosition((float) x*TILEW, (float) y*TILEH);
-	}
-	sugar += grid[x][y].eat();
-	//else stay on the same tile cause you cant move
-}
-
-void Agent::sex(int xT, int yT, Tile grid[][GRIDH], Agent* &a, std::vector<Agent*>& newAgent){
+void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::vector<Agent*> &agent, Agent* &a){
+	
 
 	if((*a).isFertile() && this->isFertile() && (*a).gender != this->gender ){
 		//possible children locations
@@ -302,8 +270,8 @@ void Agent::sex(int xT, int yT, Tile grid[][GRIDH], Agent* &a, std::vector<Agent
 		(*a).sugar -= (*a).sugarStart/2;
 		int s = grid[(*fieldsIt).x][(*fieldsIt).y].eat();
 		child->addSugar(s);
-		newAgent.push_back(child);
-		int childId = (*child).getId();
+		agent.push_back(child);
+		int childId = (*agent.back()).getId();
 		(*a).addChild(childId);
 		this->addChild(childId);
 	}
@@ -341,26 +309,20 @@ void Agent::addSugar(int amount){
 	if(amount>0) sugar+= amount;
 }
 
-void Agent::leaveLegacy(Agent* agents[GRIDW][GRIDH]){
+void Agent::leaveLegacy(std::vector<Agent*> &agent){
 	if(sugar<=0) return;
 	//what if no children?
 	int sugareach = (int)floor(sugar/children.size());
 	std::vector<int>::iterator cit=children.begin();
-	//std::vector<Agent*>::iterator it;
+	std::vector<Agent*>::iterator it;
 	while(cit!=children.end()){
-		for(int x=0; x<GRIDW; x++){
-			for(int y=0; y<GRIDH; y++){
-				if(agents[x][y]){
-					Agent* a = agents[x][y];
-					if( (*a).getId() == (*cit) )
-					{
-						(*a).addSugar(sugareach);
-						break;
-					}
-				}
+		for(it=agent.begin(); it != agent.end(); ++it){
+			if( (*(*it)).getId() == (*cit) )
+			{
+				(*(*it)).addSugar(sugareach);
+				break;
 			}
 		}
-
 		++cit;
 	}
 }

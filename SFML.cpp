@@ -166,12 +166,9 @@ int main()
 	}
 
 	// we create random agents
-	std::vector<Agent*> newAgent;
-	newAgent.reserve(800);
-	//
-	static Agent* agents[GRIDW][GRIDH];
-	for(int i=0;i<GRIDW;i++) for(int j=0;j<GRIDH;j++)
-			agents[i][j] = NULL;
+	std::vector<Agent*> agent;
+	agent.reserve(2500);
+	//for(std::vector<Agent*>::iterator it=agent.begin(); it != agent.end(); ++it){
 	for(int i=0; i<AGENTS; i++){
 		int x,y;
 		do{
@@ -179,8 +176,8 @@ int main()
 			y = rand()%GRIDW;
 		}while(tile[x][y].isTaken());
 		Agent* a = new Agent(x,y);
-		agents[x][y] = a;
-		tile[x][y].eat();//discard food; why?
+		agent.push_back(a);
+		tile[x][y].eat();
 	}
 		
 	sf::Time time = clock.getElapsedTime();
@@ -222,16 +219,6 @@ int main()
 					window.close();
 				}
 			}
-			else if(event.type ==sf::Event::MouseButtonReleased)
-			{
-				int x = event.mouseButton.x;
-				int y = event.mouseButton.y;
-				x = x/TILEW;
-				y = y/TILEH;
-				if(agents[x][y])
-					std::cout << agents[x][y]->getCoord().x << " " << agents[x][y]->getCoord().y << " ";
-				std::cout << (tile[x][y].isTaken()?"Yes":"No") <<std::endl;
-			}
         }
 		
 		//update
@@ -246,87 +233,53 @@ int main()
 		double vision = 0;
 		double metabol = 0;
 		bool temp;
-		//bool isAlive;
 		int people = 0;
-		for(int x=0; x<GRIDW; x++){
-			for(int y=0; y<GRIDH; y++){
-				if(agents[x][y]){
-					Agent* a = agents[x][y];
-					(*a).update(tile, agents, years, newAgent);
-					sugar +=	(*a).getWealth();
-					vision +=	(*a).getVision();
-					metabol +=	(*a).getMetabolRate();
-					sf::Vector2i vecT = (*a).getCoord();
-					for(int i=0;i<TAGCOUNT;i++)
-					{ 
-						histogramData[i] += (*a).tagString.tags[i];//collect tagStrings for histogram data; no abstraction
-					}
-				}
+		std::vector<Agent*>::iterator it=agent.begin();
+		while(it!=agent.end()){
+			people++;
+			temp =				(*(*it)).update(tile, agent, aveVision);
+			sugar +=			(*(*it)).getWealth();
+			//sugar +=			(*(*it)).tagString.getGroup();
+			vision +=			(*(*it)).getVision();
+			metabol +=			(*(*it)).getMetabolRate();
+			sf::Vector2i vecT = (*(*it)).getCoord();
+			for(int i=0;i<TAGCOUNT;i++)
+			{ 
+				histogramData[i] += (*(*it)).tagString.tags[i];//collect tagStrings for histogram data; no abstraction
 			}
-		}
 
-		Agent* agentsTemp[GRIDW][GRIDH] = {NULL};
-		for(int x=0; x<GRIDW; x++){
-			for(int y=0; y<GRIDH; y++){
-				if(agents[x][y]){
-					Agent * a = agents[x][y];
-					sf::Vector2i vecT = (*a).getCoord();
-					if((*a).toDelete){
-						tile[vecT.x][vecT.y].freeUp();
-						delete a;
-					}
-					else{//move
-						agentsTemp[vecT.x][vecT.y] = a;
-					}
-				}
+			if(!temp) {
+				//inheritance rule
+				(*(*it)).leaveLegacy(agent);
+				//delete this object
+				tile[vecT.x][vecT.y].freeUp();
+				delete (*it);
+				it = agent.erase(it);
 			}
-		}		
-		std::vector<Agent*>::iterator it = newAgent.end() ;
-		while(it!=newAgent.begin())
-		{
-			Agent * a = newAgent.back();
-			sf::Vector2i vecT = (*a).getCoord();
-			assert(agentsTemp[vecT.x][vecT.y]==NULL);
-			agentsTemp[vecT.x][vecT.y] = a;
-			newAgent.pop_back();
-			it = newAgent.end();
+			else
+				++it;
 		}
-		//clear
-		for(int x=0; x<GRIDW; x++){
-			for(int y=0; y<GRIDH; y++){
-				agents[x][y] = NULL;
-			}
-		}
-		//swap back array values
-		for(int x=0; x<GRIDW; x++){
-			for(int y=0; y<GRIDH; y++){
-				agents[x][y] = agentsTemp[x][y];
-				if(agents[x][y])
-					people++;
-			}
-		}
-
 
 		if(years % 10==0){
-			graph.plotData(people);
+			graph.plotData(agent.size());
 		}
 		histogram.plotData(histogramData, people);
 
-		if(people>0){
+		if(agent.size()){
 			aveSugar = (int)sugar/people;
 			aveVision = vision/people;
 			//std::cout << "   " << tile[25][24].pollution << "   " << std::endl;
 			//std::cout << tile[24][25].pollution << " " << tile[25][25].pollution << " " << tile[26][25].pollution << std::endl;
 			//std::cout << "   " << tile[25][26].pollution << "   " << std::endl;
-			//std::cout << (int)years/10 << "\t" << people << "\tTS: " << sugar << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
+			std::cout << (int)years/10 << "\t" << agent.size() << "\tTS: " << sugar << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
 		}
 		
 
 		//tile update
 		for(int i=0;i<GRIDW;i++){
 			for(int j=0;j<GRIDH;j++){
-				tile[i][j].grow();
-				//tile[i][j].seasonalGrow(years, tile);
+				//tile[i][j].grow();
+				tile[i][j].seasonalGrow(years, tile);
 			}
 		}
 
@@ -345,13 +298,9 @@ int main()
 			window.draw(tile[i][j]);
 		}
 		
-		for(int x=0;x<GRIDW; x++)
-			for(int y=0; y<GRIDH; y++)
-				if(agents[x][y])
-					window.draw(*agents[x][y]);
-		/*for(std::vector<Agent*>::iterator it=agent.begin(); it != agent.end(); ++it){
+		for(std::vector<Agent*>::iterator it=agent.begin(); it != agent.end(); ++it){
 			window.draw(*(*it));
-		}*/
+		}
 
 		window.draw(sideSprite);
 		window.draw(text);

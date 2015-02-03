@@ -19,7 +19,6 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <assert.h>
 
 #include "tile.h"
 #include "tagString.h"
@@ -58,22 +57,20 @@ private:
 	std::vector<int> children;
 
 	
-	void sex(int xT, int yT, Tile[][GRIDH], Agent* &a, std::vector<Agent*>& newAgent);
+	void sex(int xT, int yT, Tile[][GRIDH], std::vector<Agent*>&, Agent* &a);
 	void move(Tile[][GRIDH]);
 	void moveWPollution(Tile[][GRIDH]);
-	void moveWCombat(Tile[][GRIDH]);
 	void setVariables();
 
 public:
 	TagString tagString;
-	bool toDelete;
 
 public:
 	Agent();
 	Agent(int x, int y);
 	Agent(int x, int y, double wealth, double met, int vis, TagString tags);
 	
-	bool update(Tile[][GRIDH], Agent* agents[GRIDW][GRIDH], double s, std::vector<Agent*>& newAgent);
+	bool update(Tile[][GRIDH], std::vector<Agent*>&, double s);
 	sf::Vector2i getCoord();
 	double getWealth();
 	double getMetabolRate();
@@ -86,7 +83,7 @@ public:
 	* Iterates over all children and looks for each of them in an agent vector
 	* If it is alive then give it its inheritance
 	**/
-	void leaveLegacy(Agent* agents[GRIDW][GRIDH]);
+	void leaveLegacy(std::vector<Agent*> &agent);
 	int getId();
 };
 

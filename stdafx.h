@@ -10,7 +10,6 @@
 
 #include <stdio.h>
 #include <tchar.h>
-#include <assert.h>
 
 #ifdef _DEBUG
 #pragma comment(lib,"sfml-graphics-d.lib")
