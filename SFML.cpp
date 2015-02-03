@@ -5,7 +5,7 @@
 #define GRIDH 50
 #define TILEW 10
 #define TILEH 10
-#define AGENTS 400
+#define AGENTS 100
 #define HISTOGRAMH 200
 #define TAGCOUNT 11
 
@@ -271,15 +271,15 @@ int main()
 			//std::cout << "   " << tile[25][24].pollution << "   " << std::endl;
 			//std::cout << tile[24][25].pollution << " " << tile[25][25].pollution << " " << tile[26][25].pollution << std::endl;
 			//std::cout << "   " << tile[25][26].pollution << "   " << std::endl;
-			std::cout << (int)years/10 << "\t" << agent.size() << "\tTS: " << sugar << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
+			//std::cout << (int)years/10 << "\t" << agent.size() << "\tTS: " << sugar << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
 		}
 		
 
 		//tile update
 		for(int i=0;i<GRIDW;i++){
 			for(int j=0;j<GRIDH;j++){
-				//tile[i][j].grow();
-				tile[i][j].seasonalGrow(years, tile);
+				tile[i][j].grow();
+				//tile[i][j].seasonalGrow(years, tile);
 			}
 		}
 

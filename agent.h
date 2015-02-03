@@ -32,6 +32,7 @@
 #define MAXVISION 5
 #define MAXMETABOL 4
 #define AGEM 10
+#define LOOTLIMIT 2
 
 enum Sex{
 	M,
@@ -55,11 +56,13 @@ private:
 	short int endFertility;
 	Sex	gender;
 	std::vector<int> children;
+	bool dead;
 
 	
 	void sex(int xT, int yT, Tile[][GRIDH], std::vector<Agent*>&, Agent* &a);
 	void move(Tile[][GRIDH]);
 	void moveWPollution(Tile[][GRIDH]);
+	void moveWCombat(Tile[][GRIDH], std::vector<Agent*> &agent);
 	void setVariables();
 
 public:
@@ -85,6 +88,7 @@ public:
 	**/
 	void leaveLegacy(std::vector<Agent*> &agent);
 	int getId();
+	void kill(int sugarTaken=0);
 };
 
 struct point {
@@ -96,3 +100,17 @@ struct point {
     	return dist < val.dist; 
     }
 };
+
+struct pointWCombat {
+	int x;
+	int y;
+	Agent* agent;
+	int sugar;
+	int dist;
+	pointWCombat(int px, int py, int pdist, int psugar, Agent* pagent){x=px;y=py;dist=pdist;sugar=psugar;agent=pagent;}
+	bool operator<( const pointWCombat& val ) const { 
+    	return dist < val.dist; 
+    }
+};
+
+#define MIN(a,b) (((a)<(b))?(a):(b))

@@ -2,6 +2,38 @@
 
 int Agent::idCounter;
 
+//helper functions
+Agent* getAgentByCoord(std::vector<Agent*> &agent, int x, int y){
+	std::vector<Agent*>::iterator it;
+	sf::Vector2i pos(x,y);
+	for(it=agent.begin(); it != agent.end(); ++it){
+		if( (*(*it)).getCoord() == pos)
+		{
+			return (*it);
+		}
+	}
+	return NULL;
+}
+
+bool isVulnerableToRetaliation(std::vector<Agent*> &agent, int x, int y, int myGroup, int myVision, int myWealth){
+	int xLow = (x-myVision)<0 ? (x-myVision)+GRIDW : (x-myVision);
+	int xHigh = (x+myVision)>=GRIDW ? (x+myVision)-GRIDW : (x+myVision);
+	int yLow = (y-myVision)<0 ? (y-myVision)+GRIDH : (y-myVision);
+	int yHigh = (y+myVision)>=GRIDH ? (y+myVision)-GRIDH : (y+myVision);
+	std::vector<Agent*>::iterator it;
+	sf::Vector2i pos(x,y);
+	for(it=agent.begin(); it != agent.end(); ++it){
+		Agent* temp = (*it);
+		sf::Vector2i vec = temp->getCoord();
+		if((vec.x==x && vec.y>=yLow && vec.y<=yHigh) || (vec.y==y && vec.x>=xLow && vec.x<=xHigh))
+			if(temp->tagString.getGroup() != myGroup && temp->getWealth() > myWealth) 
+				return true;
+	}
+	return false;
+}
+
+
+
 Agent::Agent(){
 	this->setVariables();
 }
@@ -41,12 +73,10 @@ void Agent::setVariables(){
 	this->metabolism=	(rand()% MAXMETABOL)+1;
 	this->puberty =		((rand()% (4 * AGEM))+ 12 * AGEM); //12 - 15
 	this->endFertility =( (gender==F) ? ((rand()% (11 * AGEM))+ 40 * AGEM) : ((rand()% (11 * AGEM))+ 50 * AGEM) );
+	this->dead =		false;
 }
 
 bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
-	//movement rule
-	move(grid);
-
 	//coloring
 	if(tagString.getGroup())
 		setFillColor(sf::Color(0, 0, 255));
@@ -58,9 +88,14 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	age++;
 	
 	//death rule
-	if(sugar <=0 || age>maxAge){
+	if(sugar <=0 || age>maxAge || dead){
 		return false;
 	}
+
+	//movement rule
+	move(grid);
+	//moveWPollution(grid);
+	//moveWCombat(grid, agent);
 
 	//mating rule
 	int xT = x+1;
@@ -110,10 +145,6 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 void Agent::move(Tile grid[][GRIDH]){
 	std::vector<point> points;
 	int high = 0;
-	
-	//inlcude self? agents dont move!
-	//points.push_back(point(x,y,0));
-	//high = grid[x][y].getSugarLvl();
 
 	for(int a=x-vision; a<=x+vision; a++){
 		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
@@ -167,15 +198,10 @@ void Agent::move(Tile grid[][GRIDH]){
 	sugar += grid[x][y].eat();
 	//else stay on the same tile cause you cant move
 }
-
 // code copying; only difference is the getSugarLvl to getS_Pratio()
 void Agent::moveWPollution(Tile grid[][GRIDH]){
 	std::vector<point> points;
 	int high = 0;
-	
-	//inlcude self? agents dont move!
-	//points.push_back(point(x,y,0));
-	//high = grid[x][y].getS_Pratio();
 
 	for(int a=x-vision; a<=x+vision; a++){
 		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
@@ -224,6 +250,81 @@ void Agent::moveWPollution(Tile grid[][GRIDH]){
 		this->x= points.at(random).x;
 		this->y= points.at(random).y;
 		grid[oldx][oldy].freeUp();
+		setPosition((float) x*TILEW, (float) y*TILEH);
+	}
+	sugar += grid[x][y].eat();
+	//else stay on the same tile cause you cant move
+}
+// code copying;
+void Agent::moveWCombat(Tile grid[][GRIDH], std::vector<Agent*> &agent){
+	std::vector<pointWCombat> points;
+	int high = 0;
+	int myGroup = this->tagString.getGroup();
+
+	for(int a=x-vision; a<=x+vision; a++){
+		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
+		Agent* temp = getAgentByCoord(agent, aT, y);
+		if(grid[aT][y].isTaken() 
+			&& (temp->tagString.getGroup()==myGroup
+				|| temp->getWealth() > this->getWealth() 
+				|| isVulnerableToRetaliation(agent, aT, y, myGroup, this->getVision(), this->getWealth()) )) {
+			continue;
+		}
+		int lvl = grid[aT][y].getSugarLvl();
+		int bonusSugar=0;
+		if(temp)
+			bonusSugar = MIN(LOOTLIMIT, temp->getWealth());
+		lvl += bonusSugar;
+		if(lvl > high){
+			points.clear();
+			high = lvl;
+		}
+		points.push_back(pointWCombat(aT,y,abs(x-a), bonusSugar, temp));
+	}
+	for(int a=y-vision; a<=y+vision; a++){
+		int aT = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
+		Agent* temp = getAgentByCoord(agent, x, aT);
+		if(grid[x][aT].isTaken() 
+			&& (temp->tagString.getGroup()==myGroup
+				|| temp->getWealth() > this->getWealth() 
+				|| isVulnerableToRetaliation(agent, x, aT, myGroup, this->getVision(), this->getWealth()) )) {
+			continue;
+		}
+		int lvl = grid[x][aT].getSugarLvl();
+		int bonusSugar=0;
+		if(temp)
+			bonusSugar = MIN(LOOTLIMIT, temp->getWealth());
+		lvl += bonusSugar;
+		if(lvl > high){
+			points.clear();
+			high = lvl;
+		}
+		points.push_back(pointWCombat(x,aT,abs(y-a), bonusSugar, temp));
+	}
+
+	int random;
+	//add while loop for concurrency
+	if(points.size()){
+		//find the largest CLOSEST sugar tile
+		//cumbersome but works
+		std::sort( points.begin(), points.end() );
+		int min = points.at(0).dist;
+		for(unsigned int i=1;i<points.size();i++){
+			if(points.at(i).dist>min){
+				points.erase(points.begin()+i);
+				i--;
+			}
+		}
+
+		// if we have more then random
+		random = rand() % points.size();
+		int oldx = x; int oldy = y;
+		this->x= points.at(random).x;
+		this->y= points.at(random).y;
+		grid[oldx][oldy].freeUp();
+		if(points.at(random).agent)
+			points.at(random).agent->kill( points.at(random).sugar );
+		this->addSugar( points.at(random).sugar);
 		setPosition((float) x*TILEW, (float) y*TILEH);
 	}
 	sugar += grid[x][y].eat();
@@ -329,4 +430,10 @@ void Agent::leaveLegacy(std::vector<Agent*> &agent){
 
 int Agent::getId(){
 	return id;
+}
+
+void Agent::kill(int sugarTaken){
+	this->sugar -= sugarTaken>0 ? sugarTaken : 0;
+	this->dead = true;//killed on next iteration
+	std::cout << "Killed: " <<sugarTaken << std::endl;
 }
