@@ -5,7 +5,7 @@
 #define GRIDH 50
 #define TILEW 10
 #define TILEH 10
-#define AGENTS 100
+#define AGENTS 400
 #define HISTOGRAMH 200
 #define TAGCOUNT 11
 

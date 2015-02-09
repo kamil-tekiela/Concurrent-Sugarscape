@@ -93,9 +93,9 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	}
 
 	//movement rule
-	move(grid);
+	//move(grid);
 	//moveWPollution(grid);
-	//moveWCombat(grid, agent);
+	moveWCombat(grid, agent);
 
 	//mating rule
 	int xT = x+1;
@@ -271,15 +271,18 @@ void Agent::moveWCombat(Tile grid[][GRIDH], std::vector<Agent*> &agent){
 			continue;
 		}
 		int lvl = grid[aT][y].getSugarLvl();
-		int bonusSugar=0;
+		int bonusSugar = 0;
 		if(temp)
 			bonusSugar = MIN(LOOTLIMIT, temp->getWealth());
 		lvl += bonusSugar;
-		if(lvl > high){
+		if(lvl == high){
+			points.push_back(pointWCombat(aT,y,abs(x-a), bonusSugar, temp));
+		}
+		else if(lvl > high){
 			points.clear();
 			high = lvl;
+			points.push_back(pointWCombat(aT,y,abs(x-a), bonusSugar, temp));
 		}
-		points.push_back(pointWCombat(aT,y,abs(x-a), bonusSugar, temp));
 	}
 	for(int a=y-vision; a<=y+vision; a++){
 		int aT = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
@@ -295,11 +298,14 @@ void Agent::moveWCombat(Tile grid[][GRIDH], std::vector<Agent*> &agent){
 		if(temp)
 			bonusSugar = MIN(LOOTLIMIT, temp->getWealth());
 		lvl += bonusSugar;
-		if(lvl > high){
+		if(lvl == high){
+			points.push_back(pointWCombat(x,aT,abs(y-a), bonusSugar, temp));
+		}
+		else if(lvl > high){
 			points.clear();
 			high = lvl;
+			points.push_back(pointWCombat(x,aT,abs(y-a), bonusSugar, temp));
 		}
-		points.push_back(pointWCombat(x,aT,abs(y-a), bonusSugar, temp));
 	}
 
 	int random;
@@ -309,14 +315,14 @@ void Agent::moveWCombat(Tile grid[][GRIDH], std::vector<Agent*> &agent){
 		//cumbersome but works
 		std::sort( points.begin(), points.end() );
 		int min = points.at(0).dist;
-		for(unsigned int i=1;i<points.size();i++){
+		for(unsigned int i=1;i<points.size();++i){
 			if(points.at(i).dist>min){
 				points.erase(points.begin()+i);
 				i--;
 			}
 		}
 
-		// if we have more then random
+		// if we have more than one possible destination then pick one randomly
 		random = rand() % points.size();
 		int oldx = x; int oldy = y;
 		this->x= points.at(random).x;

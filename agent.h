@@ -32,7 +32,7 @@
 #define MAXVISION 5
 #define MAXMETABOL 4
 #define AGEM 10
-#define LOOTLIMIT 2
+#define LOOTLIMIT 100000
 
 enum Sex{
 	M,
