@@ -1,13 +1,4 @@
-#include "stdafx.h"
-
-//duplicated constants; see tile.h
-#define GRIDW 50
-#define GRIDH 50
-#define TILEW 10
-#define TILEH 10
-#define AGENTS 400
-#define HISTOGRAMH 200
-#define TAGCOUNT 11
+#include "main.h"
 
 class Graph : public sf::RenderTexture {
 private: 

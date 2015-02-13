@@ -1,15 +1,4 @@
-// stdafx.h : include file for standard system include files,
-// or project specific include files that are used frequently, but
-// are changed infrequently
-//
-
 #pragma once
-
-#include "tile.h"
-#include "agent.h"
-
-#include <stdio.h>
-#include <tchar.h>
 
 #ifdef _DEBUG
 #pragma comment(lib,"sfml-graphics-d.lib")
@@ -27,10 +16,28 @@
 #pragma comment(lib,"opengl32.lib")
 #pragma comment(lib,"glu32.lib") 
 #include <SFML/Graphics.hpp>
+
 #include <iostream>
 #include <vector>
 #include <algorithm>
 
+#define GRIDW 50
+#define GRIDH 50
+#define TILEW 10
+#define TILEH 10
 
+#define MAXLEVEL 5
+#define POLLUTIONALPHA 1
+#define POLLUTIONBETA 1
+#define DIFFUSION 1
 
-// TODO: reference additional headers your program requires here
+#define RADIUS 5
+#define MAXVISION 5
+#define MAXMETABOL 4
+#define AGEM 10
+#define LOOTLIMIT 100000
+
+#define TAGCOUNT 11
+
+#define AGENTS 400
+#define HISTOGRAMH 200

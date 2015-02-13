@@ -93,9 +93,9 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	}
 
 	//movement rule
-	//move(grid);
+	move(grid);
 	//moveWPollution(grid);
-	moveWCombat(grid, agent);
+	//moveWCombat(grid, agent);
 
 	//mating rule
 	int xT = x+1;

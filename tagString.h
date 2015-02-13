@@ -1,10 +1,7 @@
 #pragma once
-#include <algorithm>
-#include <iostream>
 
-#define TAGCOUNT 11
+#include "settings.h"
 
-using namespace std;
 
 struct TagString
 {
