@@ -24,7 +24,7 @@ Tile::Tile(int x, int y){
 	this->setPosition((float) x*TILEW+offset, (float) y*TILEH+offset);
 }
 
-void Tile::grow(){
+void Tile::grow(Tile grid[][GRIDH]){
 	/*if(taken)
 		setFillColor(sf::Color::Black);
 	else
@@ -36,10 +36,11 @@ void Tile::grow(){
 	int offset = MAXLEVEL-level;
 	setPosition((float) x*TILEW+offset, (float) y*TILEH+offset);
 
-	//pollutionDiffusion();
+	if(MOVEMENT==WithPollution)
+		pollutionDiffusion(grid);
 }
 
-void Tile::seasonalGrow(int time, Tile grid[][GRIDH], int seasonLen){
+void Tile::seasonalGrow(Tile grid[][GRIDH], int time, int seasonLen){
 	if(level>=capacity) {
 		level = floor(level);
 		return;
@@ -53,7 +54,8 @@ void Tile::seasonalGrow(int time, Tile grid[][GRIDH], int seasonLen){
 	int offset = MAXLEVEL-std::max(0, (int)level);
 	setPosition((float) x*TILEW+offset, (float) y*TILEH+offset);
 
-	//pollutionDiffusion(grid);
+	if(MOVEMENT==WithPollution)
+		pollutionDiffusion(grid);
 }
 
 void Tile::pollutionDiffusion(Tile grid[][GRIDH]){
@@ -73,7 +75,8 @@ void Tile::pollutionDiffusion(Tile grid[][GRIDH]){
 int Tile::eat(){
 	taken=true;
 	int temp = std::max(0, (int)level);
-	//genPollutionG(temp);
+	if(MOVEMENT==WithPollution)
+		genPollutionG(temp);
 	level=-1;	//either 0 or -1; -1 yields better results but 0 is more correct
 	return temp;
 }

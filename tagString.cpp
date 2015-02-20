@@ -3,23 +3,21 @@
 
 TagString::TagString(void)
 {
-	for(int i=0;i<TAGCOUNT;i++){
-		tags[i] = (rand()%2) != 0;
-	}
-}
-
-TagString::TagString(int)
-{
-	NULL;
+	for(int i=0;i<TAGCOUNT;i++)		tags[i] = (rand()%2) != 0;
 }
 
 int TagString::getGroup(void)
 {
-	float ret=0;
-	for(int i=0;i<TAGCOUNT;i++){
-		ret+= i[tags];
-	}
-	return (int)((ret/TAGCOUNT)+0.5);
+	int ret=0;
+	for(int i=0;i<TAGCOUNT;++i)		ret+= i[tags];
+	return static_cast<int>((1.0*ret/TAGCOUNT)+0.5);	//assuming there exists only 2 groups
+}
+
+int TagString::numberOfBitsSet(void)
+{
+	int ret=0;
+	for(int i=0;i<TAGCOUNT;++i)		ret+= i[tags];
+	return ret;
 }
 
 void TagString::setFromParents(TagString &a, TagString &b)

@@ -21,8 +21,8 @@ public:
 	Tile();
 	Tile(int x, int y);
 	
-	void grow();
-	void seasonalGrow(int time, Tile grid[][GRIDH], int seasonLen=50);
+	void grow(Tile grid[][GRIDH]);
+	void seasonalGrow(Tile grid[][GRIDH], int time, int seasonLen=50);
 	int eat();
 	
 	int getSugarLvl();

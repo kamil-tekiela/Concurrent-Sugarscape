@@ -35,9 +35,26 @@
 #define MAXVISION 5
 #define MAXMETABOL 4
 #define AGEM 10
-#define LOOTLIMIT 100000
+#define LOOTLIMIT 2
 
 #define TAGCOUNT 11
 
-#define AGENTS 400
-#define HISTOGRAMH 200
+static const int IMMUNELENGTH = 50;
+static const int MASTERDISEASE = 25;
+static const int MAXDISEASELEN = 10;
+static const int DISEASESGIVEN = 10;
+
+static const int AGENTS = 400;
+static const int HISTOGRAMH = 200;
+
+
+enum movement {NormalM, WithPollution, WithCombat};
+enum growback {NormalG, Seasonal};
+
+static const movement MOVEMENT = NormalM;
+static const growback GROWBACK = NormalG;
+static const bool INHERITANCE = true;
+static const bool CULTURE = false;
+static const bool MATING = true;
+static const bool REPLACEMENT = false;
+static const bool DISEASE = true;

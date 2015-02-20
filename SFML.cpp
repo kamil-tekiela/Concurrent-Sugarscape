@@ -1,4 +1,5 @@
 #include "main.h"
+#include <numeric>
 
 class Graph : public sf::RenderTexture {
 private: 
@@ -124,7 +125,7 @@ int main()
 	sf::Font font;
 	font.loadFromFile("C:\\Windows\\Fonts\\GARA.TTF");
 
-	Graph graph(GRIDW*TILEW, GRIDH*TILEH, 2500, font);
+	Graph graph(GRIDW*TILEW, GRIDH*TILEH, 10, font);
 	
 	sf::Sprite sideSprite(graph.getTexture());
 	sideSprite.setPosition(GRIDW*TILEW,0);
@@ -142,11 +143,16 @@ int main()
 	Histogram histogram(GRIDW*TILEW, GRIDH*TILEH+2, GRIDW*TILEW, HISTOGRAMH-2);
 
 	sf::Clock clock;
-	
+
 	double aveSugar = 0;
 	double aveVision = 0;
 	int years=0;
 	int del=0;
+
+	std::vector<Disease> masterDisease;
+	masterDisease.resize(MASTERDISEASE);
+	std::vector<unsigned int> indices(masterDisease.size());
+	std::iota(indices.begin(), indices.end(), 0);
 
 	// we create sugarscape
 	static Tile tile[GRIDW][GRIDH];
@@ -159,7 +165,6 @@ int main()
 	// we create random agents
 	std::vector<Agent*> agent;
 	agent.reserve(2500);
-	//for(std::vector<Agent*>::iterator it=agent.begin(); it != agent.end(); ++it){
 	for(int i=0; i<AGENTS; i++){
 		int x,y;
 		do{
@@ -167,6 +172,10 @@ int main()
 			y = rand()%GRIDW;
 		}while(tile[x][y].isTaken());
 		Agent* a = new Agent(x,y);
+		if(DISEASE){
+			std::random_shuffle(indices.begin(), indices.end());
+			for(int di=0;di<DISEASESGIVEN; ++di)		a->receiveDisease(masterDisease.at(indices.at(di)));
+		}
 		agent.push_back(a);
 		tile[x][y].eat();
 	}
@@ -182,6 +191,7 @@ int main()
 	int lastTime = time.asMilliseconds();
 	int lastFrameCount = 0;
 	int fpsInt=0;
+	int killed = 0;
 
 	/////////////////////////////////////////////////////////////////////////////
 	//***************************************************************************
@@ -228,31 +238,42 @@ int main()
 		std::vector<Agent*>::iterator it=agent.begin();
 		while(it!=agent.end()){
 			people++;
-			temp =				(*(*it)).update(tile, agent, aveVision);
-			sugar +=			(*(*it)).getWealth();
-			//sugar +=			(*(*it)).tagString.getGroup();
-			vision +=			(*(*it)).getVision();
-			metabol +=			(*(*it)).getMetabolRate();
-			sf::Vector2i vecT = (*(*it)).getCoord();
-			for(int i=0;i<TAGCOUNT;i++)
-			{ 
-				histogramData[i] += (*(*it)).tagString.tags[i];//collect tagStrings for histogram data; no abstraction
+			temp =				(*it)->update(tile, agent, aveVision);
+			//sugar +=			(*it)->getWealth();
+			sugar +=			(*it)->test();
+			//sugar +=			(*it)->tagString.getGroup();
+			vision +=			(*it)->getVision();
+			metabol +=			(*it)->getMetabolRate();
+			sf::Vector2i vecT = (*it)->getCoord();
+			for(int i=0;i<TAGCOUNT;i++){ 
+				histogramData[i] += (*it)->tagString.tags[i];//collect tagStrings for histogram data; no abstraction
 			}
 
 			if(!temp) {
 				//inheritance rule
-				(*(*it)).leaveLegacy(agent);
+				if(INHERITANCE)	(*it)->leaveLegacy(agent);
 				//delete this object
 				tile[vecT.x][vecT.y].freeUp();
 				delete (*it);
 				it = agent.erase(it);
+				if(REPLACEMENT){
+					int x,y;
+					do{
+						x = rand()%GRIDW;
+						y = rand()%GRIDH;
+					}while(tile[x][y].isTaken());
+					Agent* a = new Agent(x,y);
+					agent.insert(it, a);
+					++it;
+					tile[x][y].eat();
+				}
 			}
 			else
 				++it;
 		}
 
 		if(years % 10==0){
-			graph.plotData(agent.size());
+			graph.plotData(sugar/agent.size());
 		}
 		histogram.plotData(histogramData, people);
 
@@ -269,8 +290,8 @@ int main()
 		//tile update
 		for(int i=0;i<GRIDW;i++){
 			for(int j=0;j<GRIDH;j++){
-				tile[i][j].grow();
-				//tile[i][j].seasonalGrow(years, tile);
+				if(GROWBACK == NormalG)			tile[i][j].grow(tile);
+				else if(GROWBACK == Seasonal)	tile[i][j].seasonalGrow(tile, years);
 			}
 		}
 
@@ -284,9 +305,10 @@ int main()
 
 		window.setView(normalView);
 
-		for(int i=0;i<GRIDW;i++)
-		for(int j=0;j<GRIDH;j++){
-			window.draw(tile[i][j]);
+		for(int i=0;i<GRIDW;i++){
+			for(int j=0;j<GRIDH;j++){
+				window.draw(tile[i][j]);
+			}
 		}
 		
 		for(std::vector<Agent*>::iterator it=agent.begin(); it != agent.end(); ++it){

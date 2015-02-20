@@ -4,6 +4,8 @@
 
 #include "tile.h"
 #include "tagString.h"
+#include "immuneSys.h"
+#include "disease.h"
 
 enum Sex{
 	M,
@@ -21,6 +23,7 @@ private:
 	int sugarStart;
 	short int vision;
 	double metabolism;
+	double metabolicFee;
 	short int maxAge;
 	short int age;
 	short int puberty;
@@ -28,6 +31,8 @@ private:
 	Sex	gender;
 	std::vector<int> children;
 	bool dead;
+	ImmuneSys phenotype;
+	std::vector<Disease> diseases;
 
 	
 	void sex(int xT, int yT, Tile[][GRIDH], std::vector<Agent*>&, Agent* &a);
@@ -35,14 +40,17 @@ private:
 	void moveWPollution(Tile[][GRIDH]);
 	void moveWCombat(Tile[][GRIDH], std::vector<Agent*> &agent);
 	void setVariables();
+	void giveDisease(Agent* &a);
+	void immuneResponse();
 
 public:
 	TagString tagString;
+	const ImmuneSys genotype;
 
 public:
 	Agent();
 	Agent(int x, int y);
-	Agent(int x, int y, double wealth, double met, int vis, TagString tags);
+	Agent(int x, int y, double wealth, double met, int vis, TagString tags, ImmuneSys immuneSys);
 	
 	bool update(Tile[][GRIDH], std::vector<Agent*>&, double s);
 	sf::Vector2i getCoord();
@@ -60,6 +68,8 @@ public:
 	void leaveLegacy(std::vector<Agent*> &agent);
 	int getId();
 	void kill(int sugarTaken=0);
+	void receiveDisease(Disease disease);
+	int test();
 };
 
 struct point {

@@ -45,7 +45,8 @@ Agent::Agent(int x, int y){
 	this->setPosition((float) x*TILEW, (float) y*TILEH);
 }
 
-Agent::Agent(int x, int y, double wealth, double met, int vis, TagString tags){
+Agent::Agent(int x, int y, double wealth, double met, int vis, TagString tags, ImmuneSys immuneSys) 
+: genotype(immuneSys) {
 	this->setVariables();
 	this->x=			x;
 	this->y=			y;
@@ -55,6 +56,7 @@ Agent::Agent(int x, int y, double wealth, double met, int vis, TagString tags){
 	this->metabolism=	met;
 	this->setPosition((float) x*TILEW, (float) y*TILEH);
 	this->tagString =	tags;
+	this->phenotype =	immuneSys;
 }
 
 void Agent::setVariables(){
@@ -74,17 +76,22 @@ void Agent::setVariables(){
 	this->puberty =		((rand()% (4 * AGEM))+ 12 * AGEM); //12 - 15
 	this->endFertility =( (gender==F) ? ((rand()% (11 * AGEM))+ 40 * AGEM) : ((rand()% (11 * AGEM))+ 50 * AGEM) );
 	this->dead =		false;
+	this->phenotype =	this->genotype;
+	this->metabolicFee =0;
 }
 
 bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	//coloring
-	if(tagString.getGroup())
+	//if(tagString.getGroup())
+	if(diseases.size()==0)
 		setFillColor(sf::Color(0, 0, 255));
 	else
 		setFillColor(sf::Color(255, 0, 0));
-	sugar -= metabolism;
+	sugar -= metabolism + metabolicFee;
 	//pollution
-	//grid[x][y].genPollutionM(metabolism);
+	if(MOVEMENT==WithPollution){
+		grid[x][y].genPollutionM(metabolism);
+	}
 	age++;
 	
 	//death rule
@@ -93,9 +100,10 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	}
 
 	//movement rule
-	move(grid);
-	//moveWPollution(grid);
-	//moveWCombat(grid, agent);
+	if(MOVEMENT==WithCombat)
+		moveWCombat(grid, agent);
+	else
+		move(grid);
 
 	//mating rule
 	int xT = x+1;
@@ -114,8 +122,9 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 		}
 		if(found){
 			Agent* a = (*it); //wrapper for (*(*it)) -> (*a)
-			sex(xT, yT, grid, agent, a);
-			tagString.affected((*a).tagString);
+			if(MATING)		sex(xT, yT, grid, agent, a);
+			if(CULTURE)		tagString.affected(a->tagString);
+			if(DISEASE)		giveDisease(a);
 		}
 	}
 	xT = x;
@@ -134,10 +143,13 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 		}
 		if(found){
 			Agent* a = (*it); //wrapper for (*(*it)) -> (*a)
-			sex(xT, yT, grid, agent, a);
-			tagString.affected((*a).tagString);
+			if(MATING)		sex(xT, yT, grid, agent, a);
+			if(CULTURE)		tagString.affected(a->tagString);
+			if(DISEASE)		giveDisease(a);
 		}
 	}
+
+	if(DISEASE)		this->immuneResponse();
 
 	return true;
 }
@@ -145,11 +157,15 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 void Agent::move(Tile grid[][GRIDH]){
 	std::vector<point> points;
 	int high = 0;
+	int lvl = 0;
 
 	for(int a=x-vision; a<=x+vision; a++){
 		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
 		if(grid[aT][y].isTaken()) continue;
-		int lvl = grid[aT][y].getSugarLvl();
+		if(MOVEMENT==WithPollution)
+			lvl = grid[aT][y].getS_Pratio();
+		else
+			lvl = grid[aT][y].getSugarLvl();
 		if(lvl == high){
 			points.push_back(point(aT,y,abs(x-a)));
 		}
@@ -162,64 +178,10 @@ void Agent::move(Tile grid[][GRIDH]){
 	for(int a=y-vision; a<=y+vision; a++){
 		int aT = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
 		if(grid[x][aT].isTaken()) continue;
-		int lvl = grid[x][aT].getSugarLvl();
-		if(lvl == high){
-			points.push_back(point(x,aT,abs(y-a)));
-		}
-		else if(lvl > high){
-			points.clear();
-			points.push_back(point(x,aT,abs(y-a)));
-			high = lvl;
-		}
-	}
-
-	int random;
-	//add while loop for concurrency
-	if(points.size()){
-		//find the largest CLOSEST sugar tile
-		//cumbersome but works
-		std::sort( points.begin(), points.end() );
-		int min = points.at(0).dist;
-		for(unsigned int i=1;i<points.size();i++){
-			if(points.at(i).dist>min){
-				points.erase(points.begin()+i);
-				i--;
-			}
-		}
-
-		// if we have more then random
-		random = rand() % points.size();
-		int oldx = x; int oldy = y;
-		this->x= points.at(random).x;
-		this->y= points.at(random).y;
-		grid[oldx][oldy].freeUp();
-		setPosition((float) x*TILEW, (float) y*TILEH);
-	}
-	sugar += grid[x][y].eat();
-	//else stay on the same tile cause you cant move
-}
-// code copying; only difference is the getSugarLvl to getS_Pratio()
-void Agent::moveWPollution(Tile grid[][GRIDH]){
-	std::vector<point> points;
-	int high = 0;
-
-	for(int a=x-vision; a<=x+vision; a++){
-		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
-		if(grid[aT][y].isTaken()) continue;
-		int lvl = grid[aT][y].getS_Pratio();
-		if(lvl == high){
-			points.push_back(point(aT,y,abs(x-a)));
-		}
-		else if(lvl > high){
-			points.clear();
-			points.push_back(point(aT,y,abs(x-a)));
-			high = lvl;
-		}
-	}
-	for(int a=y-vision; a<=y+vision; a++){
-		int aT = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
-		if(grid[x][aT].isTaken()) continue;
-		int lvl = grid[x][aT].getS_Pratio();
+		if(MOVEMENT==WithPollution)
+			lvl = grid[aT][y].getS_Pratio();
+		else
+			lvl = grid[x][aT].getSugarLvl();
 		if(lvl == high){
 			points.push_back(point(x,aT,abs(y-a)));
 		}
@@ -364,7 +326,9 @@ void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::vector<Agent*> &agent, 
 		double childMet = (rand()%2) ? this->getMetabolRate() : (*a).getMetabolRate() ;
 		int childVis = (rand()%2) ? this->vision : (*a).vision ;
 		TagString tempTag;
-		tempTag.setFromParents(this->tagString, (*a).tagString);
+		tempTag.setFromParents(this->tagString, a->tagString);
+		ImmuneSys tempImmu;
+		tempImmu.setFromParents(this->genotype, a->genotype);
 
 		//childMet = this->getMetabolRate() | (*it).getMetabolRate();
 		//childVis = this->vision & (*it).vision;
@@ -372,7 +336,7 @@ void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::vector<Agent*> &agent, 
 								this->sugarStart/2+(*a).sugarStart/2, 
 								childMet,
 								childVis,
-								tempTag);
+								tempTag, tempImmu);
 		this->sugar -= this->sugarStart/2;
 		(*a).sugar -= (*a).sugarStart/2;
 		int s = grid[(*fieldsIt).x][(*fieldsIt).y].eat();
@@ -441,5 +405,39 @@ int Agent::getId(){
 void Agent::kill(int sugarTaken){
 	this->sugar -= sugarTaken>0 ? sugarTaken : 0;
 	this->dead = true;//killed on next iteration
-	std::cout << "Killed: " <<sugarTaken << std::endl;
+}
+
+void Agent::receiveDisease(Disease disease){
+	if(phenotype.isSubstring(disease)) return;
+	for (std::vector<Disease>::iterator it = diseases.begin(); it != diseases.end(); ++it)
+		if((*it)==disease) return;
+	diseases.push_back(disease);
+	metabolicFee += 0.5;
+}
+
+void Agent::giveDisease(Agent* &a){
+	if(diseases.size()==0) return;
+	int random = 0;
+	if(diseases.size() > 1)
+		random = rand() % diseases.size();
+	a->receiveDisease(diseases.at(random));
+}
+
+void Agent::immuneResponse(){
+	for (std::vector<Disease>::iterator it = diseases.begin(); it != diseases.end(); ){
+		if(phenotype.affected((*it)))
+		{
+			//assuming the disease cannot be deleted, only its symptoms can be cured
+			//it = diseases.erase(it);
+			++it;
+			//std::cout << "rid" << std::endl;
+		}
+		else
+			++it;
+	}
+	metabolicFee = diseases.size() * 0.5;
+}
+
+int Agent::test(){
+	return diseases.size();
 }
