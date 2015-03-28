@@ -48,13 +48,14 @@ static const int AGENTS = 400;
 static const int HISTOGRAMH = 200;
 
 
-enum movement {NormalM, WithPollution, WithCombat};
+enum movement {NormalM, WithPollution, WithCombat, WithTrade};
 enum growback {NormalG, Seasonal};
 
-static const movement MOVEMENT = NormalM;
+static const movement MOVEMENT = WithTrade;
 static const growback GROWBACK = NormalG;
 static const bool INHERITANCE = true;
-static const bool CULTURE = false;
+static const bool CULTURE = true;
 static const bool MATING = true;
 static const bool REPLACEMENT = false;
-static const bool DISEASE = true;
+static const bool DISEASE = false;
+static const bool TRADING = true;

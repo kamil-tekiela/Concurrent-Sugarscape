@@ -15,7 +15,7 @@ Agent* getAgentByCoord(std::vector<Agent*> &agent, int x, int y){
 	return NULL;
 }
 
-bool isVulnerableToRetaliation(std::vector<Agent*> &agent, int x, int y, int myGroup, int myVision, int myWealth){
+bool isVulnerableToRetaliation(std::vector<Agent*> &agent, int x, int y, int myGroup, int myVision, double myWealth){
 	int xLow = (x-myVision)<0 ? (x-myVision)+GRIDW : (x-myVision);
 	int xHigh = (x+myVision)>=GRIDW ? (x+myVision)-GRIDW : (x+myVision);
 	int yLow = (y-myVision)<0 ? (y-myVision)+GRIDH : (y-myVision);
@@ -51,7 +51,7 @@ Agent::Agent(int x, int y, double wealth, double met, int vis, TagString tags, I
 	this->x=			x;
 	this->y=			y;
 	this->sugar=		wealth;
-	this->sugarStart=	(int)wealth;
+	this->sugarStart=	static_cast<int>(wealth);
 	this->vision=		vis;
 	this->metabolism=	met;
 	this->setPosition((float) x*TILEW, (float) y*TILEH);
@@ -70,9 +70,11 @@ void Agent::setVariables(){
 	this->age=			((rand()% (50 * AGEM))+ 0 * AGEM); //0 - 500
 	this->gender =		(rand()% 2) ? M : F; //shortcut for M=0 F=1;
 	this->sugar=		(rand()% 50)+50; 
-	this->sugarStart=	(int)sugar;
+	this->sugarStart=	static_cast<int>(sugar);
+	this->spices=		(rand()% 50)+50; 
 	this->vision=		(rand()% MAXVISION)+1;
 	this->metabolism=	(rand()% MAXMETABOL)+1;
+	this->metabolismSpice=(rand()% MAXMETABOL)+1;
 	this->puberty =		((rand()% (4 * AGEM))+ 12 * AGEM); //12 - 15
 	this->endFertility =( (gender==F) ? ((rand()% (11 * AGEM))+ 40 * AGEM) : ((rand()% (11 * AGEM))+ 50 * AGEM) );
 	this->dead =		false;
@@ -82,12 +84,15 @@ void Agent::setVariables(){
 
 bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	//coloring
-	//if(tagString.getGroup())
-	if(diseases.size()==0)
-		setFillColor(sf::Color(0, 0, 255));
+	if(tagString.getGroup())
+	//if(diseases.size()==0)
+		setFillColor(sf::Color::Blue);
 	else
-		setFillColor(sf::Color(255, 0, 0));
+		setFillColor(sf::Color::Red);
 	sugar -= metabolism + metabolicFee;
+	if(MOVEMENT==WithTrade){
+		spices -= metabolismSpice + metabolicFee;
+	}
 	//pollution
 	if(MOVEMENT==WithPollution){
 		grid[x][y].genPollutionM(metabolism);
@@ -95,7 +100,7 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	age++;
 	
 	//death rule
-	if(sugar <=0 || age>maxAge || dead){
+	if(sugar <=0 || age>maxAge || dead || (MOVEMENT==WithTrade && spices<=0)){
 		return false;
 	}
 
@@ -105,67 +110,59 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	else
 		move(grid);
 
-	//mating rule
-	int xT = x+1;
-	int yT = y;
-	xT = xT>=GRIDW ? xT-GRIDW : xT;
-	if(grid[xT][yT].isTaken()){
-		sf::Vector2i vecT(xT,yT);
-		//find agent living on this tile
-		std::vector<Agent*>::iterator it;
-		bool found= false;
-		for(it=agent.begin(); it != agent.end(); ++it){
-			if((*(*it)).getCoord() == vecT){ 
-				found = true;
-				break;
+	//Von Neumann's neighbourhood
+	std::vector<sf::Vector2i> positions;
+	positions.push_back(sf::Vector2i(x+1>=GRIDW ? x+1-GRIDW : x+1, y));
+	positions.push_back(sf::Vector2i(x, y+1>=GRIDH ? y+1-GRIDH : y+1));
+	positions.push_back(sf::Vector2i(x-1<0 ? x-1+GRIDW : x-1, y));
+	positions.push_back(sf::Vector2i(x, y-1<0 ? y-1+GRIDH : y-1));
+	std::vector<Agent*> vonNeumanns;
+	for(unsigned i=0; i<positions.size(); ++i){
+		if(grid[positions.at(i).x][positions.at(i).y].isTaken()){
+			//find agent living on this tile
+			std::vector<Agent*>::iterator it;
+			for(it=agent.begin(); it != agent.end(); ++it){
+				if((*(*it)).getCoord() == positions.at(i)){ 
+					vonNeumanns.push_back((*it));
+					break;
+				}
 			}
-		}
-		if(found){
-			Agent* a = (*it); //wrapper for (*(*it)) -> (*a)
-			if(MATING)		sex(xT, yT, grid, agent, a);
-			if(CULTURE)		tagString.affected(a->tagString);
-			if(DISEASE)		giveDisease(a);
 		}
 	}
-	xT = x;
-	yT = y+1;
-	yT = yT>=GRIDH ? yT-GRIDH : yT;
-	if(grid[xT][yT].isTaken()){
-		sf::Vector2i vecT(xT,yT);
-		//find agent living on this tile
-		std::vector<Agent*>::iterator it;
-		bool found= false;
-		for(it=agent.begin(); it != agent.end(); ++it){
-			if((*(*it)).getCoord() == vecT){ 
-				found = true;
-				break;
-			}
-		}
-		if(found){
-			Agent* a = (*it); //wrapper for (*(*it)) -> (*a)
-			if(MATING)		sex(xT, yT, grid, agent, a);
-			if(CULTURE)		tagString.affected(a->tagString);
-			if(DISEASE)		giveDisease(a);
-		}
+	//apply rules to neighbours
+	for(unsigned i=0; i<vonNeumanns.size(); ++i){
+		Agent* a = vonNeumanns.at(i);
+		if(MATING)		sex(grid, agent, a);
+		if(CULTURE)		tagString.affected(a->tagString);
+		if(DISEASE)		giveDisease(a);
+		if(TRADING)		trade(a);
 	}
 
-	if(DISEASE)		this->immuneResponse();
+	if(DISEASE)		this->immuneResponse(); 
 
 	return true;
 }
 
 void Agent::move(Tile grid[][GRIDH]){
 	std::vector<point> points;
-	int high = 0;
-	int lvl = 0;
-
+	double high = 0;
+	double lvl = 0;
+	
 	for(int a=x-vision; a<=x+vision; a++){
 		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
 		if(grid[aT][y].isTaken()) continue;
-		if(MOVEMENT==WithPollution)
+		if(MOVEMENT==WithPollution){
 			lvl = grid[aT][y].getS_Pratio();
-		else
+		}
+		else if(MOVEMENT==WithTrade){
+			//welfare
+			double sug = grid[aT][y].getSugarLvl();
+			double spi = grid[aT][y].getSpiceLvl();
+			lvl = static_cast<int>(this->welfare(this->sugar+sug, this->spices+spi));
+		}
+		else{
 			lvl = grid[aT][y].getSugarLvl();
+		}
 		if(lvl == high){
 			points.push_back(point(aT,y,abs(x-a)));
 		}
@@ -178,10 +175,18 @@ void Agent::move(Tile grid[][GRIDH]){
 	for(int a=y-vision; a<=y+vision; a++){
 		int aT = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
 		if(grid[x][aT].isTaken()) continue;
-		if(MOVEMENT==WithPollution)
+		if(MOVEMENT==WithPollution){
 			lvl = grid[aT][y].getS_Pratio();
-		else
+		}
+		else if(MOVEMENT==WithTrade){
+			//welfare
+			double sug = grid[x][aT].getSugarLvl();
+			double spi = grid[x][aT].getSpiceLvl();
+			lvl = static_cast<int>(this->welfare(this->sugar+sug, this->spices+spi));
+		}
+		else{
 			lvl = grid[x][aT].getSugarLvl();
+		}
 		if(lvl == high){
 			points.push_back(point(x,aT,abs(y-a)));
 		}
@@ -215,6 +220,7 @@ void Agent::move(Tile grid[][GRIDH]){
 		setPosition((float) x*TILEW, (float) y*TILEH);
 	}
 	sugar += grid[x][y].eat();
+	spices += grid[x][y].eatSpice();
 	//else stay on the same tile cause you cant move
 }
 // code copying;
@@ -235,7 +241,7 @@ void Agent::moveWCombat(Tile grid[][GRIDH], std::vector<Agent*> &agent){
 		int lvl = grid[aT][y].getSugarLvl();
 		int bonusSugar = 0;
 		if(temp)
-			bonusSugar = MIN(LOOTLIMIT, temp->getWealth());
+			bonusSugar = static_cast<int>(MIN(LOOTLIMIT, floor(temp->getWealth())));
 		lvl += bonusSugar;
 		if(lvl == high){
 			points.push_back(pointWCombat(aT,y,abs(x-a), bonusSugar, temp));
@@ -258,7 +264,7 @@ void Agent::moveWCombat(Tile grid[][GRIDH], std::vector<Agent*> &agent){
 		int lvl = grid[x][aT].getSugarLvl();
 		int bonusSugar=0;
 		if(temp)
-			bonusSugar = MIN(LOOTLIMIT, temp->getWealth());
+			bonusSugar = static_cast<int>(MIN(LOOTLIMIT, floor(temp->getWealth())));
 		lvl += bonusSugar;
 		if(lvl == high){
 			points.push_back(pointWCombat(x,aT,abs(y-a), bonusSugar, temp));
@@ -299,8 +305,9 @@ void Agent::moveWCombat(Tile grid[][GRIDH], std::vector<Agent*> &agent){
 	//else stay on the same tile cause you cant move
 }
 
-void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::vector<Agent*> &agent, Agent* &a){
-	
+void Agent::sex(Tile grid[][GRIDH], std::vector<Agent*> &agent, Agent* &a){
+	int xT = a->getCoord().x;
+	int yT = a->getCoord().y;
 
 	if((*a).isFertile() && this->isFertile() && (*a).gender != this->gender ){
 		//possible children locations
@@ -336,7 +343,8 @@ void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::vector<Agent*> &agent, 
 								this->sugarStart/2+(*a).sugarStart/2, 
 								childMet,
 								childVis,
-								tempTag, tempImmu);
+								tempTag, 
+								tempImmu);
 		this->sugar -= this->sugarStart/2;
 		(*a).sugar -= (*a).sugarStart/2;
 		int s = grid[(*fieldsIt).x][(*fieldsIt).y].eat();
@@ -348,12 +356,75 @@ void Agent::sex(int xT, int yT, Tile grid[][GRIDH], std::vector<Agent*> &agent, 
 	}
 }
 
+void Agent::trade(Agent* &a){
+	double myMRS =	this->	getMRS();
+	double hisMRS =	a->		getMRS();
+	if(myMRS == hisMRS)		return;
+	double p =				sqrt(myMRS * hisMRS);//geometric mean
+	double sugarExch =		1;
+	double spicesExch =		1;
+	if(p>1)					spicesExch = p;
+	else if(p<1)			sugarExch = 1/p;
+	//sugar ->>> a
+	//spice <<<- a
+	if(myMRS < hisMRS){
+		double wPre1 =	this->welfare(this->sugar, this->spices);
+		double wPost1 =	this->welfare(this->sugar - sugarExch, this->spices + spicesExch);
+		double wPre2 =	a->welfare(a->getWealth(), a->getSpices());
+		double wPost2 =	a->welfare(a->getWealth() + sugarExch, a->getSpices() - spicesExch);
+		double myMRSnew = this->getMRS(-sugarExch, +spicesExch);
+		double hisMRSnew = a->getMRS(+sugarExch, -spicesExch);
+		//are they better off, is there a crossover?
+		if(wPre1<wPost1 && wPre2<wPost2 && myMRSnew<hisMRSnew){
+			//make trade
+			this->subSugar(sugarExch);
+			this->addSpices(spicesExch);
+			a->addSugar(sugarExch);
+			a->subSpices(spicesExch);
+			this->trade(a);
+			//std::cout << sugarExch << "\t" << spicesExch << std::endl;
+		}
+	}
+	//sugar <<<- a
+	//spice ->>> a
+	else if(myMRS > hisMRS){
+		double wPre1 =	this->welfare(this->sugar, this->spices);
+		double wPost1 =	this->welfare(this->sugar + sugarExch, this->spices - spicesExch);
+		double wPre2 =	a->welfare(a->getWealth(), a->getSpices());
+		double wPost2 =	a->welfare(a->getWealth() - sugarExch, a->getSpices() + spicesExch);
+		double myMRSnew = this->getMRS(+sugarExch, -spicesExch);
+		double hisMRSnew = a->getMRS(-sugarExch, +spicesExch);
+		//are they better off, is there a crossover?
+		if(wPre1<wPost1 && wPre2<wPost2 && myMRSnew>hisMRSnew){
+			//make trade
+			this->addSugar(sugarExch);
+			this->subSpices(spicesExch);
+			a->subSugar(sugarExch);
+			a->addSpices(spicesExch);
+			this->trade(a);
+		}
+	}
+}
+
+double Agent::welfare(double w1, double w2){
+	double mt = metabolism+metabolismSpice;
+	return std::pow(w1, metabolism/mt) * std::pow(w2, metabolismSpice/mt);
+}
+
+double Agent::getMRS(double sug, double spi){
+	return (metabolism*(spices+spi))/(metabolismSpice*(sugar+sug));
+}
+
 bool Agent::isFertile(){
 	return (age>=puberty && age<endFertility && sugar>=sugarStart);
 }
 
 double Agent::getWealth(){
 	return sugar;
+}
+
+double Agent::getSpices(){
+	return spices;
 }
 
 double Agent::getMetabolRate(){
@@ -376,8 +447,17 @@ void Agent::addChild(int child){
 	children.push_back(child);
 }
 
-void Agent::addSugar(int amount){
+void Agent::addSugar(double amount){
 	if(amount>0) sugar+= amount;
+}
+void Agent::subSugar(double amount){
+	if(amount>0) sugar-= amount;
+}
+void Agent::addSpices(double amount){
+	if(amount>0) spices+= amount;
+}
+void Agent::subSpices(double amount){
+	if(amount>0) spices-= amount;
 }
 
 void Agent::leaveLegacy(std::vector<Agent*> &agent){

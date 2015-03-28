@@ -21,8 +21,10 @@ private:
 	int y;
 	double sugar;
 	int sugarStart;
+	double spices;
 	short int vision;
 	double metabolism;
+	double metabolismSpice;
 	double metabolicFee;
 	short int maxAge;
 	short int age;
@@ -35,10 +37,11 @@ private:
 	std::vector<Disease> diseases;
 
 	
-	void sex(int xT, int yT, Tile[][GRIDH], std::vector<Agent*>&, Agent* &a);
+	void sex(Tile[][GRIDH], std::vector<Agent*>&, Agent* &a);
 	void move(Tile[][GRIDH]);
 	void moveWPollution(Tile[][GRIDH]);
 	void moveWCombat(Tile[][GRIDH], std::vector<Agent*> &agent);
+	void trade(Agent* &a);
 	void setVariables();
 	void giveDisease(Agent* &a);
 	void immuneResponse();
@@ -55,12 +58,16 @@ public:
 	bool update(Tile[][GRIDH], std::vector<Agent*>&, double s);
 	sf::Vector2i getCoord();
 	double getWealth();
+	double getSpices();
 	double getMetabolRate();
 	Sex getGender();
 	bool isFertile();
 	int getVision();
 	void addChild(int child);
-	void addSugar(int amount);
+	void addSugar(double amount);
+	void subSugar(double amount);
+	void addSpices(double amount);
+	void subSpices(double amount);
 	/**
 	* Iterates over all children and looks for each of them in an agent vector
 	* If it is alive then give it its inheritance
@@ -69,6 +76,8 @@ public:
 	int getId();
 	void kill(int sugarTaken=0);
 	void receiveDisease(Disease disease);
+	double welfare(double w1, double w2);
+	double getMRS(double sug=0, double spi=0);
 	int test();
 };
 

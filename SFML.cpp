@@ -20,12 +20,12 @@ private:
 
 		int i=lines;
 		while(--i){
-			line[0].position = sf::Vector2f(0, i*h/lines);
-			line[1].position = sf::Vector2f(w, i*h/lines);
+			line[0].position = sf::Vector2f(0, static_cast<float> (i*h/lines));
+			line[1].position = sf::Vector2f(w, static_cast<float> (i*h/lines));
 			draw(line, 2, sf::Lines);
 
 			text.setString(std::to_string((long long)( maxN-i*maxN/lines )));
-			text.setPosition(w-40, i*h/lines);
+			text.setPosition(static_cast<float> (w-40), static_cast<float> (i*h/lines));
 			draw(text);
 		}
 	}
@@ -125,7 +125,7 @@ int main()
 	sf::Font font;
 	font.loadFromFile("C:\\Windows\\Fonts\\GARA.TTF");
 
-	Graph graph(GRIDW*TILEW, GRIDH*TILEH, 10, font);
+	Graph graph(GRIDW*TILEW, GRIDH*TILEH, 2000, font);
 	
 	sf::Sprite sideSprite(graph.getTexture());
 	sideSprite.setPosition(GRIDW*TILEW,0);
@@ -239,8 +239,8 @@ int main()
 		while(it!=agent.end()){
 			people++;
 			temp =				(*it)->update(tile, agent, aveVision);
-			//sugar +=			(*it)->getWealth();
-			sugar +=			(*it)->test();
+			sugar +=			(*it)->getWealth();
+			//sugar +=			(*it)->test();
 			//sugar +=			(*it)->tagString.getGroup();
 			vision +=			(*it)->getVision();
 			metabol +=			(*it)->getMetabolRate();
@@ -273,17 +273,14 @@ int main()
 		}
 
 		if(years % 10==0){
-			graph.plotData(sugar/agent.size());
+			graph.plotData(agent.size());
 		}
 		histogram.plotData(histogramData, people);
 
 		if(agent.size()){
 			aveSugar = (int)sugar/people;
 			aveVision = vision/people;
-			//std::cout << "   " << tile[25][24].pollution << "   " << std::endl;
-			//std::cout << tile[24][25].pollution << " " << tile[25][25].pollution << " " << tile[26][25].pollution << std::endl;
-			//std::cout << "   " << tile[25][26].pollution << "   " << std::endl;
-			//std::cout << (int)years/10 << "\t" << agent.size() << "\tTS: " << sugar << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
+			std::cout << (int)years/10 << "\t" << agent.size() << "\tTS: " << sugar << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
 		}
 		
 
@@ -293,7 +290,7 @@ int main()
 				if(GROWBACK == NormalG)			tile[i][j].grow(tile);
 				else if(GROWBACK == Seasonal)	tile[i][j].seasonalGrow(tile, years);
 			}
-		}
+		} 
 
 
 		//DRAW
@@ -307,7 +304,8 @@ int main()
 
 		for(int i=0;i<GRIDW;i++){
 			for(int j=0;j<GRIDH;j++){
-				window.draw(tile[i][j]);
+				if(!tile[i][j].isTaken())
+					window.draw(tile[i][j]);
 			}
 		}
 		

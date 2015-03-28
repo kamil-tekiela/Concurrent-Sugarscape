@@ -11,6 +11,8 @@ private:
 	int y;
 	float level;
 	short int capacity;
+	float levelSpice;
+	short int capacitySpice;
 	bool taken;
 	
 	void pollutionDiffusion(Tile grid[][GRIDH]);
@@ -24,8 +26,10 @@ public:
 	void grow(Tile grid[][GRIDH]);
 	void seasonalGrow(Tile grid[][GRIDH], int time, int seasonLen=50);
 	int eat();
+	int eatSpice();
 	
 	int getSugarLvl();
+	int getSpiceLvl();
 	float getS_Pratio();
 	sf::Vector2f getCoord();
 	bool isTaken();
