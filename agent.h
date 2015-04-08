@@ -6,6 +6,10 @@
 #include "tagString.h"
 #include "immuneSys.h"
 #include "disease.h"
+#include "loan.h"
+#include <list>
+
+#include <assert.h>
 
 enum Sex{
 	M,
@@ -35,16 +39,14 @@ private:
 	bool dead;
 	ImmuneSys phenotype;
 	std::vector<Disease> diseases;
+	std::list<Loan> loansTaken;
+	std::list<Loan> loansGiven;
 
 	
-	void sex(Tile[][GRIDH], std::vector<Agent*>&, Agent* &a);
 	void move(Tile[][GRIDH]);
 	void moveWPollution(Tile[][GRIDH]);
-	void moveWCombat(Tile[][GRIDH], std::vector<Agent*> &agent);
-	void trade(Agent* &a);
+	void moveWCombat(Tile[][GRIDH],  Agent *[GRIDW*GRIDH]);
 	void setVariables();
-	void giveDisease(Agent* &a);
-	void immuneResponse();
 
 public:
 	TagString tagString;
@@ -55,7 +57,11 @@ public:
 	Agent(int x, int y);
 	Agent(int x, int y, double wealth, double met, int vis, TagString tags, ImmuneSys immuneSys);
 	
-	bool update(Tile[][GRIDH], std::vector<Agent*>&, double s);
+	bool update(Tile[][GRIDH], Agent *[GRIDW*GRIDH], double s);
+	void sex(Tile[][GRIDH], Agent *[GRIDW*GRIDH], Agent* &a);
+	void giveDisease(Agent* &a);
+	void immuneResponse();
+	void trade(Agent* &a);
 	sf::Vector2i getCoord();
 	double getWealth();
 	double getSpices();
@@ -68,17 +74,27 @@ public:
 	void subSugar(double amount);
 	void addSpices(double amount);
 	void subSpices(double amount);
+	int canLend();
+	bool wantsToBorrow();
+	void takesLoan(Loan l);
+	void givesLoan(Loan l);
+	void removeLoanGiven(Loan l);
+	void removeLoanTaken(Loan l);
+	void payDebts(int time);
 	/**
 	* Iterates over all children and looks for each of them in an agent vector
 	* If it is alive then give it its inheritance
 	**/
-	void leaveLegacy(std::vector<Agent*> &agent);
+	void leaveLegacy(Agent *[GRIDW*GRIDH]);
 	int getId();
 	void kill(int sugarTaken=0);
 	void receiveDisease(Disease disease);
 	double welfare(double w1, double w2);
 	double getMRS(double sug=0, double spi=0);
+	bool isDead();
 	int test();
+
+	bool moved;
 };
 
 struct point {

@@ -12,22 +12,33 @@ Tile::Tile(int x, int y){
 	this->y=			y;
 	this->setPosition((float) x*TILEW, (float) y*TILEH);
 	this->setFillColor(sf::Color::Green);
-	//4 is max level of sugar (floored)
-	this->capacity =	(int)std::max<double>(0.0,(MAXLEVEL)- std::min( sqrt(std::pow((double)x-35,2)+pow((double)y-15,2)), sqrt(pow((double)x-15,2)+pow((double)y-35,2)) )/5 );
+	this->capacity =	getCapacity();
+	this->capacity =	getCapacity();
 	//this->capacity =	MAXLEVEL;
 	this->level =		capacity;
-	this->capacitySpice =	(int)std::max<double>(0.0,(MAXLEVEL)- std::min( sqrt(std::pow((double)x-12,2)+pow((double)y-12,2)), sqrt(pow((double)x-38,2)+pow((double)y-38,2)) )/4 );
-	this->levelSpice =		capacitySpice;
+	if(MOVEMENT==WithTrade){
+		this->capacitySpice =	(int)std::max<double>(0.0,(MAXLEVEL)- std::min( sqrt(std::pow((double)x-15,2)+pow((double)y-15,2)), sqrt(pow((double)x-35,2)+pow((double)y-35,2)) )/5 );
+		this->levelSpice =		capacitySpice;
+	}
+	else
+		this->levelSpice = 0;
 	this->setRadius(std::max(static_cast<float>(level), static_cast<float>(levelSpice)));
 	this->taken=		false;
 	this->pollution=	0;
 
 	float offset =		static_cast<float>(MAXLEVEL-level);
 	this->setPosition(static_cast<float> (x*TILEW+offset), static_cast<float> (y*TILEH+offset));
-	if(capacitySpice > capacity)
+	if(capacitySpice > capacity && MOVEMENT==WithTrade)
 		setFillColor(sf::Color::Yellow);
 	else
 		setFillColor(sf::Color::Green);
+}
+
+short int Tile::getCapacity(){
+	//double dist = std::min( sqrt(std::pow((double)x-35,2)+pow((double)y-15,2)), sqrt(pow((double)x-15,2)+pow((double)y-35,2)) );
+	double dist = sqrt(std::pow((double)x-25,2)+pow((double)y-25,2));
+	short amount = (MAXLEVEL)- ceil(dist/5);
+	return std::max<short>(0, amount);
 }
 
 void Tile::grow(Tile grid[][GRIDH]){

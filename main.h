@@ -4,3 +4,5 @@
 
 #include "tile.h"
 #include "agent.h"
+
+#include "omp.h"

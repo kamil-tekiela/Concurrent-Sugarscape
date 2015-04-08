@@ -3,27 +3,14 @@
 int Agent::idCounter;
 
 //helper functions
-Agent* getAgentByCoord(std::vector<Agent*> &agent, int x, int y){
-	std::vector<Agent*>::iterator it;
-	sf::Vector2i pos(x,y);
-	for(it=agent.begin(); it != agent.end(); ++it){
-		if( (*(*it)).getCoord() == pos)
-		{
-			return (*it);
-		}
-	}
-	return NULL;
-}
-
-bool isVulnerableToRetaliation(std::vector<Agent*> &agent, int x, int y, int myGroup, int myVision, double myWealth){
-	int xLow = (x-myVision)<0 ? (x-myVision)+GRIDW : (x-myVision);
+bool isVulnerableToRetaliation(Agent* agent[GRIDW*GRIDH], int x, int y, int myGroup, int myVision, double myWealth){
+	int xLow = (x-myVision)<0		? (x-myVision)+GRIDW : (x-myVision);
 	int xHigh = (x+myVision)>=GRIDW ? (x+myVision)-GRIDW : (x+myVision);
-	int yLow = (y-myVision)<0 ? (y-myVision)+GRIDH : (y-myVision);
+	int yLow = (y-myVision)<0		? (y-myVision)+GRIDH : (y-myVision);
 	int yHigh = (y+myVision)>=GRIDH ? (y+myVision)-GRIDH : (y+myVision);
-	std::vector<Agent*>::iterator it;
-	sf::Vector2i pos(x,y);
-	for(it=agent.begin(); it != agent.end(); ++it){
-		Agent* temp = (*it);
+	for(int i=0; i<GRIDW*GRIDH; ++i){
+		if(agent[i]==NULL) continue;
+		Agent* temp = agent[i];
 		sf::Vector2i vec = temp->getCoord();
 		if((vec.x==x && vec.y>=yLow && vec.y<=yHigh) || (vec.y==y && vec.x>=xLow && vec.x<=xHigh))
 			if(temp->tagString.getGroup() != myGroup && temp->getWealth() > myWealth) 
@@ -80,9 +67,10 @@ void Agent::setVariables(){
 	this->dead =		false;
 	this->phenotype =	this->genotype;
 	this->metabolicFee =0;
+	this->moved =		false;
 }
 
-bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
+bool Agent::update(Tile grid[][GRIDH], Agent * agent[GRIDW*GRIDH], double s){
 	//coloring
 	if(tagString.getGroup())
 	//if(diseases.size()==0)
@@ -100,7 +88,22 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 	age++;
 	
 	//death rule
-	if(sugar <=0 || age>maxAge || dead || (MOVEMENT==WithTrade && spices<=0)){
+	if(sugar <=0 || age>maxAge || (MOVEMENT==WithTrade && spices<=0)){
+		this->dead = true;
+	}
+	if(dead){
+		//taken
+		std::list<Loan>::iterator it = loansTaken.begin();
+		while(it!=loansTaken.end()){
+			it->lender->removeLoanGiven((*it));
+			it = loansTaken.erase(it);
+		}
+		//given
+		it = loansGiven.begin();
+		while(it!=loansGiven.end()){
+			it->borrower->removeLoanTaken((*it));
+			it = loansGiven.erase(it);
+		}
 		return false;
 	}
 
@@ -109,36 +112,6 @@ bool Agent::update(Tile grid[][GRIDH], std::vector<Agent*> &agent, double s){
 		moveWCombat(grid, agent);
 	else
 		move(grid);
-
-	//Von Neumann's neighbourhood
-	std::vector<sf::Vector2i> positions;
-	positions.push_back(sf::Vector2i(x+1>=GRIDW ? x+1-GRIDW : x+1, y));
-	positions.push_back(sf::Vector2i(x, y+1>=GRIDH ? y+1-GRIDH : y+1));
-	positions.push_back(sf::Vector2i(x-1<0 ? x-1+GRIDW : x-1, y));
-	positions.push_back(sf::Vector2i(x, y-1<0 ? y-1+GRIDH : y-1));
-	std::vector<Agent*> vonNeumanns;
-	for(unsigned i=0; i<positions.size(); ++i){
-		if(grid[positions.at(i).x][positions.at(i).y].isTaken()){
-			//find agent living on this tile
-			std::vector<Agent*>::iterator it;
-			for(it=agent.begin(); it != agent.end(); ++it){
-				if((*(*it)).getCoord() == positions.at(i)){ 
-					vonNeumanns.push_back((*it));
-					break;
-				}
-			}
-		}
-	}
-	//apply rules to neighbours
-	for(unsigned i=0; i<vonNeumanns.size(); ++i){
-		Agent* a = vonNeumanns.at(i);
-		if(MATING)		sex(grid, agent, a);
-		if(CULTURE)		tagString.affected(a->tagString);
-		if(DISEASE)		giveDisease(a);
-		if(TRADING)		trade(a);
-	}
-
-	if(DISEASE)		this->immuneResponse(); 
 
 	return true;
 }
@@ -211,10 +184,10 @@ void Agent::move(Tile grid[][GRIDH]){
 			}
 		}
 
-		// if we have more then random
+		// if we have more than one possible destination then pick one randomly
 		random = rand() % points.size();
 		int oldx = x; int oldy = y;
-		this->x= points.at(random).x;
+		this->x= points.at(random).x; 
 		this->y= points.at(random).y;
 		grid[oldx][oldy].freeUp();
 		setPosition((float) x*TILEW, (float) y*TILEH);
@@ -224,14 +197,14 @@ void Agent::move(Tile grid[][GRIDH]){
 	//else stay on the same tile cause you cant move
 }
 // code copying;
-void Agent::moveWCombat(Tile grid[][GRIDH], std::vector<Agent*> &agent){
+void Agent::moveWCombat(Tile grid[][GRIDH], Agent* agent[GRIDW*GRIDH]){
 	std::vector<pointWCombat> points;
 	int high = 0;
 	int myGroup = this->tagString.getGroup();
 
 	for(int a=x-vision; a<=x+vision; a++){
 		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
-		Agent* temp = getAgentByCoord(agent, aT, y);
+		Agent* temp = agent[y*GRIDW + aT];
 		if(grid[aT][y].isTaken() 
 			&& (temp->tagString.getGroup()==myGroup
 				|| temp->getWealth() > this->getWealth() 
@@ -254,7 +227,7 @@ void Agent::moveWCombat(Tile grid[][GRIDH], std::vector<Agent*> &agent){
 	}
 	for(int a=y-vision; a<=y+vision; a++){
 		int aT = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
-		Agent* temp = getAgentByCoord(agent, x, aT);
+		Agent* temp = agent[aT*GRIDW + x];
 		if(grid[x][aT].isTaken() 
 			&& (temp->tagString.getGroup()==myGroup
 				|| temp->getWealth() > this->getWealth() 
@@ -305,7 +278,7 @@ void Agent::moveWCombat(Tile grid[][GRIDH], std::vector<Agent*> &agent){
 	//else stay on the same tile cause you cant move
 }
 
-void Agent::sex(Tile grid[][GRIDH], std::vector<Agent*> &agent, Agent* &a){
+void Agent::sex(Tile grid[][GRIDH], Agent* agent[GRIDW*GRIDH], Agent* &a){
 	int xT = a->getCoord().x;
 	int yT = a->getCoord().y;
 
@@ -349,8 +322,9 @@ void Agent::sex(Tile grid[][GRIDH], std::vector<Agent*> &agent, Agent* &a){
 		(*a).sugar -= (*a).sugarStart/2;
 		int s = grid[(*fieldsIt).x][(*fieldsIt).y].eat();
 		child->addSugar(s);
-		agent.push_back(child);
-		int childId = (*agent.back()).getId();
+		assert(!agent[(*fieldsIt).y * GRIDW + (*fieldsIt).x]);
+		agent[(*fieldsIt).y * GRIDW + (*fieldsIt).x] = child;
+		int childId = (child)->getId();
 		(*a).addChild(childId);
 		this->addChild(childId);
 	}
@@ -460,19 +434,21 @@ void Agent::subSpices(double amount){
 	if(amount>0) spices-= amount;
 }
 
-void Agent::leaveLegacy(std::vector<Agent*> &agent){
+void Agent::leaveLegacy(Agent* agent[GRIDW*GRIDH]){
 	if(sugar<=0) return;
+	return;
 	//what if no children?
 	int sugareach = (int)floor(sugar/children.size());
 	std::vector<int>::iterator cit=children.begin();
 	std::vector<Agent*>::iterator it;
 	while(cit!=children.end()){
-		for(it=agent.begin(); it != agent.end(); ++it){
-			if( (*(*it)).getId() == (*cit) )
-			{
-				(*(*it)).addSugar(sugareach);
-				break;
-			}
+		for(int i=0; i<GRIDW*GRIDH; ++i){
+			if(agent[i])
+				if( (*(agent[i])).getId() == (*cit) )
+				{
+					(*(agent[i])).addSugar(sugareach);
+					break;
+				}
 		}
 		++cit;
 	}
@@ -510,12 +486,75 @@ void Agent::immuneResponse(){
 			//assuming the disease cannot be deleted, only its symptoms can be cured
 			//it = diseases.erase(it);
 			++it;
-			//std::cout << "rid" << std::endl;
 		}
 		else
 			++it;
 	}
 	metabolicFee = diseases.size() * 0.5;
+}
+
+bool Agent::isDead(){
+	return dead;
+}
+
+int Agent::canLend(){
+	if(age>=endFertility) return sugar/2;
+	if(age>=puberty && sugar>sugarStart) return sugar-sugarStart;
+	return 0;
+}
+
+bool Agent::wantsToBorrow(){
+	int total=0;
+	for(std::list<Loan>::iterator it = loansTaken.begin(); it!=loansTaken.end(); ++it){
+		total += (*it).toRepay();
+	}
+	return ((age>=puberty && age<endFertility && sugar<sugarStart) && (sugar>(metabolism+total)));
+}
+
+void Agent::takesLoan(Loan l){
+	sugar += l.amount;
+	loansTaken.push_back(l);
+}
+
+void Agent::givesLoan(Loan l){
+	sugar -= l.amount;
+	loansGiven.push_back(l);
+}
+
+void Agent::removeLoanGiven(Loan l){
+	loansGiven.erase(std::remove(loansGiven.begin(), loansGiven.end(), l), loansGiven.end());
+}
+
+void Agent::removeLoanTaken(Loan l){
+	loansTaken.erase(std::remove(loansTaken.begin(), loansTaken.end(), l), loansTaken.end());
+}
+
+void Agent::payDebts(int time){
+	std::list<Loan>::iterator it = loansTaken.begin();
+	while(it!=loansTaken.end()){
+		if(it->takenOn + CREDITDURATION <= time){
+			int amount = it->toRepay();
+			if(sugar<amount){
+				int half = amount/2;
+				it->lender->addSugar(half);
+				this->subSugar(half);
+				Loan loan(it->lender, this, half, time);
+				loansTaken.push_front(loan);
+				it->lender->removeLoanGiven(*it);
+				loan.lender->givesLoan(loan);
+				it = loansTaken.erase(it);
+				std::cout << "payed half " << half << std::endl;
+			}
+			else{
+				it->lender->addSugar(amount);
+				this->subSugar(amount);
+				it->lender->removeLoanGiven(*it);
+				it = loansTaken.erase(it);
+			}
+		}
+		else
+			++it;
+	}
 }
 
 int Agent::test(){

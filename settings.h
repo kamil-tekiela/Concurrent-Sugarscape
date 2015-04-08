@@ -21,8 +21,8 @@
 #include <vector>
 #include <algorithm>
 
-#define GRIDW 50
-#define GRIDH 50
+#define GRIDW 51
+#define GRIDH 51
 #define TILEW 10
 #define TILEH 10
 
@@ -44,6 +44,9 @@ static const int MASTERDISEASE = 25;
 static const int MAXDISEASELEN = 10;
 static const int DISEASESGIVEN = 10;
 
+static const int CREDITDURATION = 10;
+static const int CREDITRATE = 10;
+
 static const int AGENTS = 400;
 static const int HISTOGRAMH = 200;
 
@@ -51,11 +54,12 @@ static const int HISTOGRAMH = 200;
 enum movement {NormalM, WithPollution, WithCombat, WithTrade};
 enum growback {NormalG, Seasonal};
 
-static const movement MOVEMENT = WithTrade;
+static const movement MOVEMENT = NormalM;
 static const growback GROWBACK = NormalG;
 static const bool INHERITANCE = true;
 static const bool CULTURE = true;
 static const bool MATING = true;
 static const bool REPLACEMENT = false;
 static const bool DISEASE = false;
-static const bool TRADING = true;
+static const bool TRADING = false;
+static const bool CREDITRULE = true;

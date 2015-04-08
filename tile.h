@@ -15,6 +15,7 @@ private:
 	short int capacitySpice;
 	bool taken;
 	
+	short int getCapacity();
 	void pollutionDiffusion(Tile grid[][GRIDH]);
 
 public:

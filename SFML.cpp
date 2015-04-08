@@ -121,7 +121,7 @@ public:
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW*2, GRIDH*TILEH+HISTOGRAMH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,4,0,0));
-	//window.setFramerateLimit(30); // call it once, after creating the window
+	//window.setFramerateLimit(4); // call it once, after creating the window
 	sf::Font font;
 	font.loadFromFile("C:\\Windows\\Fonts\\GARA.TTF");
 
@@ -163,8 +163,10 @@ int main()
 	}
 
 	// we create random agents
-	std::vector<Agent*> agent;
-	agent.reserve(2500);
+	Agent* agent[GRIDW*GRIDH];
+	for(int i=0; i<GRIDW*GRIDH; i++){
+		agent[i] = NULL;
+	}
 	for(int i=0; i<AGENTS; i++){
 		int x,y;
 		do{
@@ -176,8 +178,7 @@ int main()
 			std::random_shuffle(indices.begin(), indices.end());
 			for(int di=0;di<DISEASESGIVEN; ++di)		a->receiveDisease(masterDisease.at(indices.at(di)));
 		}
-		agent.push_back(a);
-		tile[x][y].eat();
+		agent[y*GRIDW + x] = a;
 	}
 		
 	sf::Time time = clock.getElapsedTime();
@@ -192,6 +193,8 @@ int main()
 	int lastFrameCount = 0;
 	int fpsInt=0;
 	int killed = 0;
+
+	bool movedToggler = false;
 
 	/////////////////////////////////////////////////////////////////////////////
 	//***************************************************************************
@@ -235,27 +238,82 @@ int main()
 		double metabol = 0;
 		bool temp;
 		int people = 0;
-		std::vector<Agent*>::iterator it=agent.begin();
-		while(it!=agent.end()){
-			people++;
-			temp =				(*it)->update(tile, agent, aveVision);
-			sugar +=			(*it)->getWealth();
-			//sugar +=			(*it)->test();
-			//sugar +=			(*it)->tagString.getGroup();
-			vision +=			(*it)->getVision();
-			metabol +=			(*it)->getMetabolRate();
-			sf::Vector2i vecT = (*it)->getCoord();
-			for(int i=0;i<TAGCOUNT;i++){ 
-				histogramData[i] += (*it)->tagString.tags[i];//collect tagStrings for histogram data; no abstraction
-			}
+		movedToggler = !movedToggler;
+		
+		int threads = 4;
+		int rows = 2;
+		int tperrow = threads/rows;
+		int wThread = floor(GRIDW/(tperrow));//25
+		int hThread = floor(GRIDH/(rows));
+		#pragma omp parallel  num_threads(threads)
+		{
+			int t = omp_get_thread_num();
+			int xStart =	(t%tperrow)*wThread;
+			int xEnd =		(t%tperrow) ? GRIDW : wThread; //25 / 51
+			int yStart =	(t>=tperrow)*hThread;	//0 / 25
+			int yEnd =		(t>=tperrow) ? GRIDH : hThread;
+			int slices = 3;
 
-			if(!temp) {
+			for(int i=0; i<slices; ++i)
+			for(int j=0; j<slices; ++j){
+				int sy = yStart + floor((yEnd-yStart)/3)*j;
+				int ey = yStart + floor((yEnd-yStart)/3.0*(j+1));
+				for(int y=sy; y<ey; ++y){
+					int sx = xStart + floor((xEnd-xStart)/3)*i;
+					int ex = xStart + floor((xEnd-xStart)/3.0*(i+1));
+					for(int x=sx; x<ex; ++x){
+						int pos = y*GRIDW + x;
+						if(!agent[pos]) continue;
+						Agent * a = agent[pos];
+						if(a->moved==movedToggler) continue;
+						#pragma omp atomic
+						people++;
+						temp =				(a)->update(tile, agent, aveVision);
+						a->moved =			movedToggler;
+						agent[pos] = NULL;
+						agent[a->getCoord().y*GRIDW + a->getCoord().x] = a;
+
+						sugar +=			(a)->getWealth();
+						vision +=			(a)->getVision();
+						metabol +=			(a)->getMetabolRate();
+						for(int i=0;i<TAGCOUNT;i++){ 
+							histogramData[i] += (a)->tagString.tags[i];//collect tagStrings for histogram data; no abstraction
+						}
+					}
+				}
+				#pragma omp barrier
+			}
+		}
+		//for(int i=0; i<GRIDW*GRIDH; ++i){
+		//for(int i=GRIDW*GRIDH-1; i>=0; --i){
+		//	if(!agent[i]) continue;
+		//	Agent * a = agent[i];
+		//	if(a->moved==movedToggler) continue;
+		//	people++;
+		//	temp =				(a)->update(tile, agent, aveVision);
+		//	a->moved =			movedToggler;
+		//	agent[i] = NULL;
+		//	agent[a->getCoord().y*GRIDW + a->getCoord().x] = a;
+
+		//	sugar +=			(a)->getWealth();
+		//	vision +=			(a)->getVision();
+		//	metabol +=			(a)->getMetabolRate();
+		//	for(int i=0;i<TAGCOUNT;i++){ 
+		//		histogramData[i] += (a)->tagString.tags[i];//collect tagStrings for histogram data; no abstraction
+		//	}
+		//}
+		//death
+		for(int i=0; i<GRIDW*GRIDH; ++i){
+			if(!agent[i]) continue;
+			Agent * obj = agent[i];
+			if((obj)->isDead()) {
+				sf::Vector2i vecT = (obj)->getCoord();
 				//inheritance rule
-				if(INHERITANCE)	(*it)->leaveLegacy(agent);
+				if(INHERITANCE)	(obj)->leaveLegacy(agent);
 				//delete this object
-				tile[vecT.x][vecT.y].freeUp();
-				delete (*it);
-				it = agent.erase(it);
+ 				tile[vecT.x][vecT.y].freeUp();
+				delete (obj);
+				agent[i] = NULL;
 				if(REPLACEMENT){
 					int x,y;
 					do{
@@ -263,24 +321,130 @@ int main()
 						y = rand()%GRIDH;
 					}while(tile[x][y].isTaken());
 					Agent* a = new Agent(x,y);
-					agent.insert(it, a);
-					++it;
-					tile[x][y].eat();
+					a->addSugar(tile[x][y].eat());
+					agent[y*GRIDW + x] = a;
 				}
 			}
-			else
-				++it;
+		}
+		if(MATING){
+			for(int i=0; i<GRIDW*GRIDH; ++i){
+				if(!agent[i]) continue;
+				Agent * obj = agent[i];
+
+				int x = obj->getCoord().x, y=obj->getCoord().y;
+				std::vector<sf::Vector2i> positions;
+				positions.push_back(sf::Vector2i(x+1>=GRIDW ? x+1-GRIDW : x+1, y));
+				positions.push_back(sf::Vector2i(x, y+1>=GRIDH ? y+1-GRIDH : y+1));
+				positions.push_back(sf::Vector2i(x-1<0 ? x-1+GRIDW : x-1, y));
+				positions.push_back(sf::Vector2i(x, y-1<0 ? y-1+GRIDH : y-1));
+				for(unsigned i=0; i<positions.size(); ++i){
+					//find agent living on this tile
+					int pos = positions.at(i).y * GRIDW + positions.at(i).x;
+					if(agent[pos]){
+						obj->sex(tile, agent, agent[pos]);
+					}
+				}
+			}
+		}
+		if(CULTURE){
+			for(int i=0; i<GRIDW*GRIDH; ++i){
+				if(!agent[i]) continue;
+				Agent * obj = agent[i];
+
+				int x = obj->getCoord().x, y=obj->getCoord().y;
+				std::vector<sf::Vector2i> positions;
+				positions.push_back(sf::Vector2i(x+1>=GRIDW ? x+1-GRIDW : x+1, y));
+				positions.push_back(sf::Vector2i(x, y+1>=GRIDH ? y+1-GRIDH : y+1));
+				positions.push_back(sf::Vector2i(x-1<0 ? x-1+GRIDW : x-1, y));
+				positions.push_back(sf::Vector2i(x, y-1<0 ? y-1+GRIDH : y-1));
+				for(unsigned i=0; i<positions.size(); ++i){
+					//find agent living on this tile
+					int pos = positions.at(i).y * GRIDW + positions.at(i).x;
+					if(agent[pos]){
+						obj->tagString.affected(agent[pos]->tagString);
+					}
+				}
+			}
+		}
+		if(DISEASE){
+			for(int i=0; i<GRIDW*GRIDH; ++i){
+				if(!agent[i]) continue;
+				Agent * obj = agent[i];
+
+				int x = obj->getCoord().x, y=obj->getCoord().y;
+				std::vector<sf::Vector2i> positions;
+				positions.push_back(sf::Vector2i(x+1>=GRIDW ? x+1-GRIDW : x+1, y));
+				positions.push_back(sf::Vector2i(x, y+1>=GRIDH ? y+1-GRIDH : y+1));
+				positions.push_back(sf::Vector2i(x-1<0 ? x-1+GRIDW : x-1, y));
+				positions.push_back(sf::Vector2i(x, y-1<0 ? y-1+GRIDH : y-1));
+				for(unsigned i=0; i<positions.size(); ++i){
+					//find agent living on this tile
+					int pos = positions.at(i).y * GRIDW + positions.at(i).x;
+					if(agent[pos]){
+						obj->giveDisease(agent[pos]);
+						obj->immuneResponse();
+					}
+				}
+			}
+		}
+		if(TRADING){
+			for(int i=0; i<GRIDW*GRIDH; ++i){
+				if(!agent[i]) continue;
+				Agent * obj = agent[i];
+
+				int x = obj->getCoord().x, y=obj->getCoord().y;
+				std::vector<sf::Vector2i> positions;
+				positions.push_back(sf::Vector2i(x+1>=GRIDW ? x+1-GRIDW : x+1, y));
+				positions.push_back(sf::Vector2i(x, y+1>=GRIDH ? y+1-GRIDH : y+1));
+				positions.push_back(sf::Vector2i(x-1<0 ? x-1+GRIDW : x-1, y));
+				positions.push_back(sf::Vector2i(x, y-1<0 ? y-1+GRIDH : y-1));
+				for(unsigned i=0; i<positions.size(); ++i){
+					//find agent living on this tile
+					int pos = positions.at(i).y * GRIDW + positions.at(i).x;
+					if(agent[pos]){
+						obj->trade(agent[pos]);
+					}
+				}
+			}
+		}
+		if(CREDITRULE){
+			for(int i=0; i<GRIDW*GRIDH; ++i){
+				if(!agent[i]) continue;
+				Agent * obj = agent[i];
+				if(!obj->wantsToBorrow()) continue;
+
+				int x = obj->getCoord().x, y=obj->getCoord().y;
+				std::vector<sf::Vector2i> positions;
+				positions.push_back(sf::Vector2i(x+1>=GRIDW ? x+1-GRIDW : x+1, y));
+				positions.push_back(sf::Vector2i(x, y+1>=GRIDH ? y+1-GRIDH : y+1));
+				positions.push_back(sf::Vector2i(x-1<0 ? x-1+GRIDW : x-1, y));
+				positions.push_back(sf::Vector2i(x, y-1<0 ? y-1+GRIDH : y-1));
+				for(unsigned i=0; i<positions.size(); ++i){
+					//find agent living on this tile
+					int pos = positions.at(i).y * GRIDW + positions.at(i).x;
+					if(agent[pos]){
+						if(agent[pos]->canLend() > 0){
+							int amount = agent[pos]->canLend();
+							Loan loan(agent[pos], obj, amount, years);
+							agent[pos]->givesLoan(loan);
+							obj->takesLoan(loan);
+						}
+					}
+				}
+				//repay
+				obj->payDebts(years);
+			}
 		}
 
 		if(years % 10==0){
-			graph.plotData(agent.size());
+			graph.plotData(people);
 		}
 		histogram.plotData(histogramData, people);
 
-		if(agent.size()){
+		if(people){
 			aveSugar = (int)sugar/people;
 			aveVision = vision/people;
-			std::cout << (int)years/10 << "\t" << agent.size() << "\tTS: " << sugar << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
+			//std::cout << (int)years/10 << "\t" << people << "\tTS: " << sugar << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
 		}
 		
 
@@ -309,8 +473,9 @@ int main()
 			}
 		}
 		
-		for(std::vector<Agent*>::iterator it=agent.begin(); it != agent.end(); ++it){
-			window.draw(*(*it));
+		for(int i=0; i<GRIDW*GRIDH; ++i){
+			if(agent[i])
+				window.draw(*agent[i]);
 		}
 
 		window.draw(sideSprite);
