@@ -8,6 +8,7 @@ Tile::Tile(){
 }
 
 Tile::Tile(int x, int y){
+	this->setPointCount(8);
 	this->x=			x;
 	this->y=			y;
 	this->setPosition((float) x*TILEW, (float) y*TILEH);
@@ -41,7 +42,10 @@ short int Tile::getCapacity(){
 	return std::max<short>(0, amount);
 }
 
-void Tile::grow(Tile grid[][GRIDH]){
+void Tile::grow(Tile grid[][GRIDH], int time){
+	if(POLLUTIONDIFFUSION && time%DIFFUSION==0){
+		pollutionDiffusion(grid);
+	}
 	if(MOVEMENT==WithTrade){
 		level = std::min(capacity, static_cast<short>(level+1));
 		levelSpice = std::min(capacitySpice, static_cast<short>(levelSpice+1));
@@ -50,8 +54,6 @@ void Tile::grow(Tile grid[][GRIDH]){
 		float offset = MAXLEVEL-r;
 		setPosition(static_cast<float> (x*TILEW+offset), static_cast<float> (y*TILEH+offset));
 
-		if(MOVEMENT==WithPollution)
-			pollutionDiffusion(grid);
 	}
 	else{
 		if(level>=capacity) return;
@@ -59,9 +61,6 @@ void Tile::grow(Tile grid[][GRIDH]){
 		setRadius(level);
 		float offset =		static_cast<float>(MAXLEVEL-level);
 		setPosition(static_cast<float> (x*TILEW+offset), static_cast<float> (y*TILEH+offset));
-
-		if(MOVEMENT==WithPollution)
-			pollutionDiffusion(grid);
 	}
 }
 
@@ -79,7 +78,7 @@ void Tile::seasonalGrow(Tile grid[][GRIDH], int time, int seasonLen){
 	int offset = MAXLEVEL-std::max(0, (int)level);
 	setPosition((float) x*TILEW+offset, (float) y*TILEH+offset);
 
-	if(MOVEMENT==WithPollution)
+	if(POLLUTIONDIFFUSION && time%DIFFUSION==0)
 		pollutionDiffusion(grid);
 }
 
@@ -122,7 +121,7 @@ int Tile::getSpiceLvl(){
 	return std::max(0, (int)levelSpice);
 }
 float Tile::getS_Pratio(){
-	return level/(1+pollution);
+	return level/(1.f+pollution);
 }
 bool Tile::isTaken(){
 	return taken;

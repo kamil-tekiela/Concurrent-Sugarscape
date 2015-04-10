@@ -24,7 +24,7 @@ public:
 	Tile();
 	Tile(int x, int y);
 	
-	void grow(Tile grid[][GRIDH]);
+	void grow(Tile grid[][GRIDH], int time);
 	void seasonalGrow(Tile grid[][GRIDH], int time, int seasonLen=50);
 	int eat();
 	int eatSpice();

@@ -120,7 +120,7 @@ public:
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW*2, GRIDH*TILEH+HISTOGRAMH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,4,0,0));
+    sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW*2, GRIDH*TILEH+HISTOGRAMH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,0,0,0));
 	//window.setFramerateLimit(4); // call it once, after creating the window
 	sf::Font font;
 	font.loadFromFile("C:\\Windows\\Fonts\\GARA.TTF");
@@ -221,6 +221,10 @@ int main()
 				if (event.key.code == sf::Keyboard::Escape)
 				{
 					window.close();
+				}
+				if (event.key.code == sf::Keyboard::Space)
+				{
+					__debugbreak();
 				}
 			}
         }
@@ -451,7 +455,7 @@ int main()
 		//tile update
 		for(int i=0;i<GRIDW;i++){
 			for(int j=0;j<GRIDH;j++){
-				if(GROWBACK == NormalG)			tile[i][j].grow(tile);
+				if(GROWBACK == NormalG)			tile[i][j].grow(tile, years);
 				else if(GROWBACK == Seasonal)	tile[i][j].seasonalGrow(tile, years);
 			}
 		} 

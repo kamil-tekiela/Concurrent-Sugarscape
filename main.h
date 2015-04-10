@@ -6,3 +6,5 @@
 #include "agent.h"
 
 #include "omp.h"
+
+#include <intrin.h>

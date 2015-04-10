@@ -47,6 +47,7 @@ Agent::Agent(int x, int y, double wealth, double met, int vis, TagString tags, I
 }
 
 void Agent::setVariables(){
+	this->setPointCount(12);
 	this->id =			++idCounter;
 	this->setFillColor(sf::Color::Red);
 	this->x =			0;
@@ -122,50 +123,52 @@ void Agent::move(Tile grid[][GRIDH]){
 	double lvl = 0;
 	
 	for(int a=x-vision; a<=x+vision; a++){
-		int aT = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
-		if(grid[aT][y].isTaken()) continue;
+		int Cx = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
+		int Cy = y;
+		if(grid[Cx][Cy].isTaken()) continue;
 		if(MOVEMENT==WithPollution){
-			lvl = grid[aT][y].getS_Pratio();
+			lvl = grid[Cx][Cy].getS_Pratio();
 		}
 		else if(MOVEMENT==WithTrade){
 			//welfare
-			double sug = grid[aT][y].getSugarLvl();
-			double spi = grid[aT][y].getSpiceLvl();
-			lvl = static_cast<int>(this->welfare(this->sugar+sug, this->spices+spi));
+			double sug = grid[Cx][Cy].getSugarLvl();
+			double spi = grid[Cx][Cy].getSpiceLvl();
+			lvl = static_cast<double>(this->welfare(this->sugar+sug, this->spices+spi));
 		}
 		else{
-			lvl = grid[aT][y].getSugarLvl();
+			lvl = grid[Cx][Cy].getSugarLvl();
 		}
 		if(lvl == high){
-			points.push_back(point(aT,y,abs(x-a)));
+			points.push_back(point(Cx,Cy,abs(x-a)));
 		}
 		else if(lvl > high){
 			points.clear();
-			points.push_back(point(aT,y,abs(x-a)));
+			points.push_back(point(Cx,Cy,abs(x-a)));
 			high = lvl;
 		}
 	}
 	for(int a=y-vision; a<=y+vision; a++){
-		int aT = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
-		if(grid[x][aT].isTaken()) continue;
+		int Cx = x;
+		int Cy = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
+		if(grid[Cx][Cy].isTaken()) continue;
 		if(MOVEMENT==WithPollution){
-			lvl = grid[aT][y].getS_Pratio();
+			lvl = grid[Cx][Cy].getS_Pratio();
 		}
 		else if(MOVEMENT==WithTrade){
 			//welfare
-			double sug = grid[x][aT].getSugarLvl();
-			double spi = grid[x][aT].getSpiceLvl();
-			lvl = static_cast<int>(this->welfare(this->sugar+sug, this->spices+spi));
+			double sug = grid[Cx][Cy].getSugarLvl();
+			double spi = grid[Cx][Cy].getSpiceLvl();
+			lvl = static_cast<double>(this->welfare(this->sugar+sug, this->spices+spi));
 		}
 		else{
-			lvl = grid[x][aT].getSugarLvl();
+			lvl = grid[Cx][Cy].getSugarLvl();
 		}
 		if(lvl == high){
-			points.push_back(point(x,aT,abs(y-a)));
+			points.push_back(point(Cx,Cy,abs(y-a)));
 		}
 		else if(lvl > high){
 			points.clear();
-			points.push_back(point(x,aT,abs(y-a)));
+			points.push_back(point(Cx,Cy,abs(y-a)));
 			high = lvl;
 		}
 	}
