@@ -1,6 +1,7 @@
 #include "main.h"
-#include <numeric>
-
+/*
+\cond HIDDEN_SYMBOLS
+*/
 class Graph : public sf::RenderTexture {
 private: 
 	int h;
@@ -117,11 +118,13 @@ public:
 
 };
 
+/*
+\endcond
+*/
 
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW*2, GRIDH*TILEH+HISTOGRAMH), "SFML works!", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,0,0,0));
-	//window.setFramerateLimit(4); // call it once, after creating the window
+    sf::RenderWindow window(sf::VideoMode(GRIDW*TILEW*2, GRIDH*TILEH+HISTOGRAMH), "Sugarscape", sf::Style::Titlebar | sf::Style::Close, sf::ContextSettings::ContextSettings 	(0,0,0,0,0));
 	sf::Font font;
 	font.loadFromFile("C:\\Windows\\Fonts\\GARA.TTF");
 
@@ -222,10 +225,6 @@ int main()
 				{
 					window.close();
 				}
-				if (event.key.code == sf::Keyboard::Space)
-				{
-					__debugbreak();
-				}
 			}
         }
 		
@@ -249,7 +248,7 @@ int main()
 		int tperrow = threads/rows;
 		int wThread = floor(GRIDW/(tperrow));//25
 		int hThread = floor(GRIDH/(rows));
-		#pragma omp parallel  num_threads(threads)
+		#pragma omp parallel num_threads(threads)
 		{
 			int t = omp_get_thread_num();
 			int xStart =	(t%tperrow)*wThread;
@@ -269,10 +268,10 @@ int main()
 						int pos = y*GRIDW + x;
 						if(!agent[pos]) continue;
 						Agent * a = agent[pos];
-						if(a->moved==movedToggler) continue;
+						if(a->moved==movedToggler || a->isDead()) continue;
 						#pragma omp atomic
 						people++;
-						temp =				(a)->update(tile, agent, aveVision);
+						temp =				(a)->update(tile, agent);
 						a->moved =			movedToggler;
 						agent[pos] = NULL;
 						agent[a->getCoord().y*GRIDW + a->getCoord().x] = a;
@@ -292,9 +291,9 @@ int main()
 		//for(int i=GRIDW*GRIDH-1; i>=0; --i){
 		//	if(!agent[i]) continue;
 		//	Agent * a = agent[i];
-		//	if(a->moved==movedToggler) continue;
+		//	if(a->moved==movedToggler || a->isDead()) continue;
 		//	people++;
-		//	temp =				(a)->update(tile, agent, aveVision);
+		//	temp =				(a)->update(tile, agent);
 		//	a->moved =			movedToggler;
 		//	agent[i] = NULL;
 		//	agent[a->getCoord().y*GRIDW + a->getCoord().x] = a;
@@ -448,7 +447,7 @@ int main()
 		if(people){
 			aveSugar = (int)sugar/people;
 			aveVision = vision/people;
-			//std::cout << (int)years/10 << "\t" << people << "\tTS: " << sugar << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
+			std::cout << (int)years/10 << "\t" << people << "\tTS: " << sugar << "\tS: " << aveSugar << "\tM: " << (double)(metabol/people) << "\tV: " << aveVision  << '\n';
 		}
 		
 

@@ -7,4 +7,7 @@
 
 #include "omp.h"
 
-#include <intrin.h>
+/**
+* Used for iota function.
+**/
+#include <numeric>

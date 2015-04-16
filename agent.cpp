@@ -2,19 +2,21 @@
 
 int Agent::idCounter;
 
-//helper functions
+/**
+* A helper function for moveWCombat.
+* Returns boolean true if site is vulnerable to retaliation
+**/
 bool isVulnerableToRetaliation(Agent* agent[GRIDW*GRIDH], int x, int y, int myGroup, int myVision, double myWealth){
-	int xLow = (x-myVision)<0		? (x-myVision)+GRIDW : (x-myVision);
-	int xHigh = (x+myVision)>=GRIDW ? (x+myVision)-GRIDW : (x+myVision);
-	int yLow = (y-myVision)<0		? (y-myVision)+GRIDH : (y-myVision);
-	int yHigh = (y+myVision)>=GRIDH ? (y+myVision)-GRIDH : (y+myVision);
-	for(int i=0; i<GRIDW*GRIDH; ++i){
-		if(agent[i]==NULL) continue;
-		Agent* temp = agent[i];
-		sf::Vector2i vec = temp->getCoord();
-		if((vec.x==x && vec.y>=yLow && vec.y<=yHigh) || (vec.y==y && vec.x>=xLow && vec.x<=xHigh))
+	for(int cx=x-myVision; cx<=x+myVision; ++cx){
+		for(int cy=y-myVision; cy<=y+myVision; ++cy){
+			int pcx = cx < 0 ? GRIDW+cx : cx >= GRIDW ? cx-GRIDW : cx;
+			int pcy = cy < 0 ? GRIDH+cy : cy >= GRIDH ? cy-GRIDH : cy;
+			if(pcx!=x && pcy!=y) continue;
+			if(agent[pcy*GRIDW + pcx]==NULL) continue;
+			Agent* temp = agent[pcy*GRIDW + pcx];
 			if(temp->tagString.getGroup() != myGroup && temp->getWealth() > myWealth) 
 				return true;
+		}
 	}
 	return false;
 }
@@ -71,7 +73,7 @@ void Agent::setVariables(){
 	this->moved =		false;
 }
 
-bool Agent::update(Tile grid[][GRIDH], Agent * agent[GRIDW*GRIDH], double s){
+bool Agent::update(Tile grid[][GRIDH], Agent * agent[GRIDW*GRIDH]){
 	//coloring
 	if(tagString.getGroup())
 	//if(diseases.size()==0)
@@ -89,10 +91,8 @@ bool Agent::update(Tile grid[][GRIDH], Agent * agent[GRIDW*GRIDH], double s){
 	age++;
 	
 	//death rule
-	if(sugar <=0 || age>maxAge || (MOVEMENT==WithTrade && spices<=0)){
+	if(isDead()){
 		this->dead = true;
-	}
-	if(dead){
 		//taken
 		std::list<Loan>::iterator it = loansTaken.begin();
 		while(it!=loansTaken.end()){
@@ -118,77 +118,45 @@ bool Agent::update(Tile grid[][GRIDH], Agent * agent[GRIDW*GRIDH], double s){
 }
 
 void Agent::move(Tile grid[][GRIDH]){
-	std::vector<point> points;
+	std::vector<sf::Vector2i> points;
 	double high = 0;
 	double lvl = 0;
+	int minDist = vision;
 	
 	for(int a=x-vision; a<=x+vision; a++){
-		int Cx = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
-		int Cy = y;
-		if(grid[Cx][Cy].isTaken()) continue;
-		if(MOVEMENT==WithPollution){
-			lvl = grid[Cx][Cy].getS_Pratio();
-		}
-		else if(MOVEMENT==WithTrade){
-			//welfare
-			double sug = grid[Cx][Cy].getSugarLvl();
-			double spi = grid[Cx][Cy].getSpiceLvl();
-			lvl = static_cast<double>(this->welfare(this->sugar+sug, this->spices+spi));
-		}
-		else{
-			lvl = grid[Cx][Cy].getSugarLvl();
-		}
-		if(lvl == high){
-			points.push_back(point(Cx,Cy,abs(x-a)));
-		}
-		else if(lvl > high){
-			points.clear();
-			points.push_back(point(Cx,Cy,abs(x-a)));
-			high = lvl;
-		}
-	}
-	for(int a=y-vision; a<=y+vision; a++){
-		int Cx = x;
-		int Cy = a < 0 ? GRIDH+a : a >= GRIDH ? a-GRIDH : a;
-		if(grid[Cx][Cy].isTaken()) continue;
-		if(MOVEMENT==WithPollution){
-			lvl = grid[Cx][Cy].getS_Pratio();
-		}
-		else if(MOVEMENT==WithTrade){
-			//welfare
-			double sug = grid[Cx][Cy].getSugarLvl();
-			double spi = grid[Cx][Cy].getSpiceLvl();
-			lvl = static_cast<double>(this->welfare(this->sugar+sug, this->spices+spi));
-		}
-		else{
-			lvl = grid[Cx][Cy].getSugarLvl();
-		}
-		if(lvl == high){
-			points.push_back(point(Cx,Cy,abs(y-a)));
-		}
-		else if(lvl > high){
-			points.clear();
-			points.push_back(point(Cx,Cy,abs(y-a)));
-			high = lvl;
-		}
-	}
-
-	int random;
-	//add while loop for concurrency
-	if(points.size()){
-		//find the largest CLOSEST sugar tile
-		//cumbersome but works
-		std::sort( points.begin(), points.end() );
-		int min = points.at(0).dist;
-		for(unsigned int i=1;i<points.size();i++){
-			if(points.at(i).dist>min){
-				points.erase(points.begin()+i);
-				i--;
+		for(int b=y-vision; b<=y+vision; b++){
+			if(a!=x && b!=y) continue;
+			int Cx = a < 0 ? GRIDW+a : a >= GRIDW ? a-GRIDW : a;
+			int Cy = b < 0 ? GRIDH+b : b >= GRIDH ? b-GRIDH : b;
+			if(grid[Cx][Cy].isTaken()) continue;
+			if(MOVEMENT==WithPollution){
+				lvl = grid[Cx][Cy].getS_Pratio();
+			}
+			else if(MOVEMENT==WithTrade){
+				//welfare
+				double sug = grid[Cx][Cy].getSugarLvl();
+				double spi = grid[Cx][Cy].getSpiceLvl();
+				lvl = static_cast<double>(this->welfare(this->sugar+sug, this->spices+spi));
+			}
+			else{
+				lvl = grid[Cx][Cy].getSugarLvl();
+			}
+			int dist = abs(x-a + y-b);
+			if(lvl == high && dist==minDist){
+				points.push_back(sf::Vector2i(Cx,Cy));
+			}
+			else if(lvl >= high && dist <= minDist){
+				points.clear();
+				points.push_back(sf::Vector2i(Cx,Cy));
+				high = lvl;
+				minDist = dist;
 			}
 		}
+	}
 
+	if(points.size()){
 		// if we have more than one possible destination then pick one randomly
-		random = rand() % points.size();
+		int random = rand() % points.size();
 		int oldx = x; int oldy = y;
 		this->x= points.at(random).x; 
 		this->y= points.at(random).y;
@@ -200,6 +168,7 @@ void Agent::move(Tile grid[][GRIDH]){
 	//else stay on the same tile cause you cant move
 }
 // code copying;
+//should be fixed the same way as normal move function
 void Agent::moveWCombat(Tile grid[][GRIDH], Agent* agent[GRIDW*GRIDH]){
 	std::vector<pointWCombat> points;
 	int high = 0;
@@ -253,10 +222,8 @@ void Agent::moveWCombat(Tile grid[][GRIDH], Agent* agent[GRIDW*GRIDH]){
 	}
 
 	int random;
-	//add while loop for concurrency
 	if(points.size()){
 		//find the largest CLOSEST sugar tile
-		//cumbersome but works
 		std::sort( points.begin(), points.end() );
 		int min = points.at(0).dist;
 		for(unsigned int i=1;i<points.size();++i){
@@ -325,7 +292,6 @@ void Agent::sex(Tile grid[][GRIDH], Agent* agent[GRIDW*GRIDH], Agent* &a){
 		(*a).sugar -= (*a).sugarStart/2;
 		int s = grid[(*fieldsIt).x][(*fieldsIt).y].eat();
 		child->addSugar(s);
-		assert(!agent[(*fieldsIt).y * GRIDW + (*fieldsIt).x]);
 		agent[(*fieldsIt).y * GRIDW + (*fieldsIt).x] = child;
 		int childId = (child)->getId();
 		(*a).addChild(childId);
@@ -359,7 +325,6 @@ void Agent::trade(Agent* &a){
 			a->addSugar(sugarExch);
 			a->subSpices(spicesExch);
 			this->trade(a);
-			//std::cout << sugarExch << "\t" << spicesExch << std::endl;
 		}
 	}
 	//sugar <<<- a
@@ -466,6 +431,10 @@ void Agent::kill(int sugarTaken){
 	this->dead = true;//killed on next iteration
 }
 
+bool Agent::isDead(){
+	return dead || (sugar <=0 || age>maxAge || (MOVEMENT==WithTrade && spices<=0));
+}
+
 void Agent::receiveDisease(Disease disease){
 	if(phenotype.isSubstring(disease)) return;
 	for (std::vector<Disease>::iterator it = diseases.begin(); it != diseases.end(); ++it)
@@ -494,10 +463,6 @@ void Agent::immuneResponse(){
 			++it;
 	}
 	metabolicFee = diseases.size() * 0.5;
-}
-
-bool Agent::isDead(){
-	return dead;
 }
 
 int Agent::canLend(){
@@ -546,7 +511,6 @@ void Agent::payDebts(int time){
 				it->lender->removeLoanGiven(*it);
 				loan.lender->givesLoan(loan);
 				it = loansTaken.erase(it);
-				std::cout << "payed half " << half << std::endl;
 			}
 			else{
 				it->lender->addSugar(amount);
@@ -558,8 +522,4 @@ void Agent::payDebts(int time){
 		else
 			++it;
 	}
-}
-
-int Agent::test(){
-	return diseases.size();
 }

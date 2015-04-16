@@ -36,8 +36,9 @@ Tile::Tile(int x, int y){
 }
 
 short int Tile::getCapacity(){
-	//double dist = std::min( sqrt(std::pow((double)x-35,2)+pow((double)y-15,2)), sqrt(pow((double)x-15,2)+pow((double)y-35,2)) );
-	double dist = sqrt(std::pow((double)x-25,2)+pow((double)y-25,2));
+	//uncomment one of the following lines, either for two peaks or a single one
+	double dist = std::min( sqrt(std::pow((double)x-35,2)+pow((double)y-15,2)), sqrt(pow((double)x-15,2)+pow((double)y-35,2)) );
+	//double dist = sqrt(std::pow((double)x-25,2)+pow((double)y-25,2));
 	short amount = (MAXLEVEL)- ceil(dist/5);
 	return std::max<short>(0, amount);
 }

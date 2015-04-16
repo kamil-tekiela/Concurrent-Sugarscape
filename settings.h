@@ -54,7 +54,7 @@ static const int HISTOGRAMH = 200;
 enum movement {NormalM, WithPollution, WithCombat, WithTrade};
 enum growback {NormalG, Seasonal};
 
-static const movement MOVEMENT = WithPollution;
+static const movement MOVEMENT = NormalM;
 static const growback GROWBACK = NormalG;
 static const bool POLLUTIONDIFFUSION = false;
 static const bool INHERITANCE = true;
