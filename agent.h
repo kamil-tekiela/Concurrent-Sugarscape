@@ -105,7 +105,7 @@ public:
 	* @param agent a pointer to an array of pointers to all the living agents
 	* This method is responsible for agent's metabolism, aging, generating pollution and movement.
 	**/
-	bool update(Tile[][GRIDH], Agent *[GRIDW*GRIDH]);
+	void update(Tile[][GRIDH], Agent *[GRIDW*GRIDH]);
 	/**
 	* Mating rule.
 	* @param grid a pointer to a 2 dimensional array of sugarscape tiles

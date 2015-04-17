@@ -44,7 +44,6 @@ bool ImmuneSys::affected(Disease &d){
 			break;
 		}
 	}
-	//std::cout << isSubstring(d) << " " << hamm << std::endl;
 	return isSubstring(d);
 }
 

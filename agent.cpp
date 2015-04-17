@@ -73,10 +73,9 @@ void Agent::setVariables(){
 	this->moved =		false;
 }
 
-bool Agent::update(Tile grid[][GRIDH], Agent * agent[GRIDW*GRIDH]){
+void Agent::update(Tile grid[][GRIDH], Agent * agent[GRIDW*GRIDH]){
 	//coloring
 	if(tagString.getGroup())
-	//if(diseases.size()==0)
 		setFillColor(sf::Color::Blue);
 	else
 		setFillColor(sf::Color::Red);
@@ -105,7 +104,7 @@ bool Agent::update(Tile grid[][GRIDH], Agent * agent[GRIDW*GRIDH]){
 			it->borrower->removeLoanTaken((*it));
 			it = loansGiven.erase(it);
 		}
-		return false;
+		return;
 	}
 
 	//movement rule
@@ -114,7 +113,7 @@ bool Agent::update(Tile grid[][GRIDH], Agent * agent[GRIDW*GRIDH]){
 	else
 		move(grid);
 
-	return true;
+	return;
 }
 
 void Agent::move(Tile grid[][GRIDH]){
@@ -404,11 +403,9 @@ void Agent::subSpices(double amount){
 
 void Agent::leaveLegacy(Agent* agent[GRIDW*GRIDH]){
 	if(sugar<=0) return;
-	return;
 	//what if no children?
 	int sugareach = (int)floor(sugar/children.size());
 	std::vector<int>::iterator cit=children.begin();
-	std::vector<Agent*>::iterator it;
 	while(cit!=children.end()){
 		for(int i=0; i<GRIDW*GRIDH; ++i){
 			if(agent[i])
@@ -428,7 +425,7 @@ int Agent::getId(){
 
 void Agent::kill(int sugarTaken){
 	this->sugar -= sugarTaken>0 ? sugarTaken : 0;
-	this->dead = true;//killed on next iteration
+	this->dead = true;
 }
 
 bool Agent::isDead(){

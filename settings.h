@@ -15,6 +15,12 @@
 #endif
 #pragma comment(lib,"opengl32.lib")
 #pragma comment(lib,"glu32.lib") 
+#pragma comment(lib,"winmm.lib") 
+#pragma comment(lib,"gdi32.lib") 
+#pragma comment(lib,"glew.lib") 
+#pragma comment(lib,"jpeg.lib") 
+#pragma comment(lib,"freetype.lib") 
+
 #include <SFML/Graphics.hpp>
 
 #include <iostream>
@@ -61,6 +67,6 @@ static const bool INHERITANCE = true;
 static const bool CULTURE = true;
 static const bool MATING = true;
 static const bool REPLACEMENT = false;
-static const bool DISEASE = false;
+static const bool DISEASE = true;
 static const bool TRADING = false;
 static const bool CREDITRULE = false;

@@ -150,7 +150,6 @@ int main()
 	double aveSugar = 0;
 	double aveVision = 0;
 	int years=0;
-	int del=0;
 
 	std::vector<Disease> masterDisease;
 	masterDisease.resize(MASTERDISEASE);
@@ -195,7 +194,6 @@ int main()
 	int lastTime = time.asMilliseconds();
 	int lastFrameCount = 0;
 	int fpsInt=0;
-	int killed = 0;
 
 	bool movedToggler = false;
 
@@ -239,16 +237,16 @@ int main()
 		double sugar = 0;
 		double vision = 0;
 		double metabol = 0;
-		bool temp;
 		int people = 0;
 		movedToggler = !movedToggler;
 		
+		#ifdef _OPENMP
 		int threads = 4;
 		int rows = 2;
 		int tperrow = threads/rows;
-		int wThread = floor(GRIDW/(tperrow));//25
-		int hThread = floor(GRIDH/(rows));
-		#pragma omp parallel num_threads(threads)
+		int wThread = floor((double)GRIDW/(tperrow));//25
+		int hThread = floor((double)GRIDH/(rows));
+		#pragma omp parallel num_threads(threads) reduction(+:people, sugar, vision, metabol)
 		{
 			int t = omp_get_thread_num();
 			int xStart =	(t%tperrow)*wThread;
@@ -259,23 +257,22 @@ int main()
 
 			for(int i=0; i<slices; ++i)
 			for(int j=0; j<slices; ++j){
-				int sy = yStart + floor((yEnd-yStart)/3)*j;
+				int sy = yStart + floor((yEnd-yStart)/3.0)*j;
 				int ey = yStart + floor((yEnd-yStart)/3.0*(j+1));
 				for(int y=sy; y<ey; ++y){
-					int sx = xStart + floor((xEnd-xStart)/3)*i;
+					int sx = xStart + floor((xEnd-xStart)/3.0)*i;
 					int ex = xStart + floor((xEnd-xStart)/3.0*(i+1));
 					for(int x=sx; x<ex; ++x){
 						int pos = y*GRIDW + x;
 						if(!agent[pos]) continue;
 						Agent * a = agent[pos];
 						if(a->moved==movedToggler || a->isDead()) continue;
-						#pragma omp atomic
-						people++;
-						temp =				(a)->update(tile, agent);
+						(a)->update(tile, agent);
 						a->moved =			movedToggler;
 						agent[pos] = NULL;
 						agent[a->getCoord().y*GRIDW + a->getCoord().x] = a;
-
+						
+						people++;
 						sugar +=			(a)->getWealth();
 						vision +=			(a)->getVision();
 						metabol +=			(a)->getMetabolRate();
@@ -287,24 +284,26 @@ int main()
 				#pragma omp barrier
 			}
 		}
-		//for(int i=0; i<GRIDW*GRIDH; ++i){
-		//for(int i=GRIDW*GRIDH-1; i>=0; --i){
-		//	if(!agent[i]) continue;
-		//	Agent * a = agent[i];
-		//	if(a->moved==movedToggler || a->isDead()) continue;
-		//	people++;
-		//	temp =				(a)->update(tile, agent);
-		//	a->moved =			movedToggler;
-		//	agent[i] = NULL;
-		//	agent[a->getCoord().y*GRIDW + a->getCoord().x] = a;
+		#else	
+		for(int i=0; i<GRIDW*GRIDH; ++i){
+		//for(int i=GRIDW*GRIDH-1; i>=0; --i){	//reverse order; used int testing
+			if(!agent[i]) continue;
+			Agent * a = agent[i];
+			if(a->moved==movedToggler || a->isDead()) continue;
+			people++;
+			(a)->update(tile, agent);
+			a->moved =			movedToggler;
+			agent[i] = NULL;
+			agent[a->getCoord().y*GRIDW + a->getCoord().x] = a;
 
-		//	sugar +=			(a)->getWealth();
-		//	vision +=			(a)->getVision();
-		//	metabol +=			(a)->getMetabolRate();
-		//	for(int i=0;i<TAGCOUNT;i++){ 
-		//		histogramData[i] += (a)->tagString.tags[i];//collect tagStrings for histogram data; no abstraction
-		//	}
-		//}
+			sugar +=			(a)->getWealth();
+			vision +=			(a)->getVision();
+			metabol +=			(a)->getMetabolRate();
+			for(int i=0;i<TAGCOUNT;i++){ 
+				histogramData[i] += (a)->tagString.tags[i];//collect tagStrings for histogram data; no abstraction
+			}
+		}
+		#endif
 		//death
 		for(int i=0; i<GRIDW*GRIDH; ++i){
 			if(!agent[i]) continue;
