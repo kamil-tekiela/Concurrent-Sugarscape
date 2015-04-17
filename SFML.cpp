@@ -286,7 +286,6 @@ int main()
 		}
 		#else	
 		for(int i=0; i<GRIDW*GRIDH; ++i){
-		//for(int i=GRIDW*GRIDH-1; i>=0; --i){	//reverse order; used int testing
 			if(!agent[i]) continue;
 			Agent * a = agent[i];
 			if(a->moved==movedToggler || a->isDead()) continue;
